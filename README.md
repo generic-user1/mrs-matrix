@@ -1,4 +1,4 @@
-#mrs-matrix
+# mrs-matrix
 
 A multiplatform clone of cmatrix, written in Rust
 

@@ -1,10 +1,9 @@
 use std::io::{stdout, Write};
 use std::time::{Instant, Duration};
 use coolor::{Color,Hsl};
-use crossterm::event::Event;
 use crossterm::{
     self,
-    event,
+    event::{self, Event},
     QueueableCommand, 
     style::{Stylize, PrintStyledContent},
     terminal::{self, ClearType}, 
@@ -66,7 +65,7 @@ fn screen_loop() -> crossterm::Result<()>
         }
         out.flush()?;
     
-        //wait for either `TARGET_FRAME_DURATION - frame_duration` or no time if frame exceeded target
+        //wait for enough time to hit TARGET_FRAME_DURATION, or no time if frame duration exceeds target
         if event::poll(TARGET_FRAME_DURATION.saturating_sub(Instant::now() - start_instant))? {
             match event::read()? {
                 //upon recieving a resize event set new column amount
@@ -77,7 +76,7 @@ fn screen_loop() -> crossterm::Result<()>
                 _ => break
             }
         }
-    };
+    }
 
     //disable raw mode
     terminal::disable_raw_mode()?;

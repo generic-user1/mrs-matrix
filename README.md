@@ -1,6 +1,11 @@
 # mrs-matrix
 
-A **m**ultiplatform clone of cmatrix, written in **R**u**s**t.
+A **m**ultiplatform **R**u**s**t clone of [cmatrix](https://github.com/abishekvashok/cmatrix).
 
-Unlike the original cmatrix, supports both Windows and Linux. To this end, uses the [crossterm](https://github.com/crossterm-rs/crossterm) library for multiplatform terminal control.<br>
-Also uses [coolor](https://github.com/Canop/coolor) for color management.
+Unlike the original cmatrix, supports both Windows and most flavors of Linux. May also support macOS, though this is untested.
+
+## Dependencies
+
+- [crossterm](https://github.com/crossterm-rs/crossterm) for multiplatform terminal control.
+- [coolor](https://github.com/Canop/coolor) for color management.
+- [rand](https://github.com/rust-random/rand) for random number generation.

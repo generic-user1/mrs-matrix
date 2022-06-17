@@ -27,9 +27,14 @@ pub fn anim_loop() -> crossterm::Result<()>
     //enable raw mode to process keypress by keypress
     terminal::enable_raw_mode()?;
 
-    //enter alternate screen and hide the cursor
+    //enter alternate screen, hide the cursor, clear the screen, and reset the cursor position
     out.queue(terminal::EnterAlternateScreen)?
-    .queue(cursor::Hide)?;
+    .queue(cursor::Hide)?
+
+    //these last two are needed to get to a known state because 
+    //the alternate screen buffer may be persistent across different sessions of this program
+    .queue(terminal::Clear(ClearType::All))?
+    .queue(cursor::MoveTo(0,0))?;
 
     const TARGET_FRAME_DURATION: Duration = Duration::from_nanos(16_666_666);
 

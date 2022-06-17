@@ -1,4 +1,5 @@
-
+//! Functions relating directly to drawing animations on the screen
+//! 
 use std::io::{stdout, Write};
 use std::time::{Instant, Duration};
 use coolor::{Color,Hsl};

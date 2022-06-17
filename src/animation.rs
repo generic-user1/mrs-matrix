@@ -49,16 +49,25 @@ pub fn anim_loop() -> crossterm::Result<()>
 
             //increment current column, and reverse direction if at maximum
             current_column += 1;
-            if current_column >= (term_cols - 1){
+            if current_column >= term_cols{
+                //cap current_column at its max value for right to left
+                current_column = term_cols - 1;
                 left_to_right = false;
             }
-        } else {
-            out.queue(cursor::MoveLeft(2))?
-            .queue(PrintStyledContent(styled_char))?;
+        } else {            
+            //move left one space
+            out.queue(cursor::MoveLeft(1))?
+            //print a char (which will move the cursor right 1 space),
+            .queue(PrintStyledContent(styled_char))?
+            //then move left another space
+            .queue(cursor::MoveLeft(1))?;
+
 
             //decrement current column, and reverse direction if at minimum
             current_column -= 1;
             if current_column <= 0 {
+                //cap current_column at its min value for left to right
+                current_column = 0;
                 left_to_right = true;
             }
         }

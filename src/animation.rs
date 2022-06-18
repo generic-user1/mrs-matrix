@@ -14,9 +14,11 @@ use crossterm::{
 use crate::raindrop::Raindrop;
 
 
-/// The main loop that renders the screen
+/// The main loop that renders the screen (WIP)
 /// 
 /// Returns after receiving any keypress
+/// 
+/// Currently just a demo
 pub fn anim_loop() -> crossterm::Result<()>
 {
     let mut out = stdout();
@@ -100,7 +102,9 @@ pub fn anim_loop() -> crossterm::Result<()>
 }
 
 //todo: remove this demo entirely
-pub fn raindrop_demo() -> crossterm::Result<()>{
+/// TEMPORARY; WILL BE REMOVED
+pub fn raindrop_demo() -> crossterm::Result<()>
+{
     let mut out = stdout();
 
     let termheight = terminal::size()?.1;

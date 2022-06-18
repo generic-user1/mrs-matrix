@@ -210,7 +210,7 @@ where T: Rng
                     .attribute(style::Attribute::Bold))
                 } else {
                     //if char is a follower, determine color lightness by subtracting the proportion
-                    //of the char's position within the raindrop from 1.0; this results in follower chars
+                    //of the char's position within the raindrop from 0.9; this results in follower chars
                     //decreasing in brightness as their distance from the leader increases
                     let follower_index: f32 = ((self.row_index - 1) - (row_index as i32)) as f32;
                     let follower_length: f32 = self.follower_content.len() as f32;
@@ -218,7 +218,8 @@ where T: Rng
                     let follower_proportion = follower_index/follower_length;
                     
                     let char_color = coolor::Color::Hsl(Hsl{
-                        h:118.0, s:0.82, l:(1.0 - follower_proportion)});
+                                                    //use of max ensures lightness is always 0 or above
+                        h:118.0, s:0.82, l:((0.9 - follower_proportion).max(0.0))});
                     
                     Some(unstyled_char.with(char_color.into()))
                 }
@@ -229,12 +230,27 @@ where T: Rng
     /// Moves the `Raindrop` down one row
     /// 
     /// To reset to the top, use [reinit_state](crate::raindrop::Raindrop::reinit_state)
-    pub fn move_drop(&mut self){
+    pub fn move_drop(&mut self)
+    {
         self.row_index += 1;
+    }
+
+    /// Returns `true` if Raindrop displays any chars on a terminal of height `terminal_height`; `false` otherwise
+    pub fn is_visible(&self, terminal_height: u16) -> bool
+    {
+
+        // if row_index is less than zero, return false immediately
+        if self.row_index < 0 {
+            return false;
+        }
+
+        self.row_index < (terminal_height as i32) + (self.follower_content.len() as i32)
+
     }
 
     // TODO: remove after demo is removed
     // demo will be removed when proper animation is implemented
+    /// TEMPORARY; WILL BE REMOVED
     pub fn set_height(&mut self, new_height: u16){
         self.row_index = new_height.into();
     }

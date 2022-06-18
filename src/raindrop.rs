@@ -274,11 +274,4 @@ where T: Rng
         self.move_drop();
     }
 
-    // TODO: remove after demo is removed
-    // demo will be removed when proper animation is implemented
-    /// TEMPORARY; WILL BE REMOVED
-    pub fn set_height(&mut self, new_height: u16){
-        self.row_index = new_height.into();
-    }
-
 }

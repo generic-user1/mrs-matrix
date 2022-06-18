@@ -1,7 +1,6 @@
-//use mrs_matrix::anim_loop;
-use mrs_matrix::animation::raindrop_demo;
+use mrs_matrix::anim_loop;
 
 fn main() -> crossterm::Result<()> 
 {
-    raindrop_demo()
+    anim_loop(25)
 }

@@ -99,6 +99,7 @@ pub fn anim_loop() -> crossterm::Result<()>
     Ok(())
 }
 
+//todo: remove this demo entirely
 pub fn raindrop_demo() -> crossterm::Result<()>{
     let mut out = stdout();
 
@@ -111,6 +112,10 @@ pub fn raindrop_demo() -> crossterm::Result<()>{
 
     let mut printclosure = || -> crossterm::Result<()> {
         let mut out = stdout();
+        
+        out.queue(terminal::Clear(terminal::ClearType::All))?
+        .queue(cursor::MoveTo(0,0))?;
+
         for row_index in 0..termheight
         {
             if let Some(styled_char) = test_drop.get_styled_char_at_row(row_index){
@@ -127,9 +132,6 @@ pub fn raindrop_demo() -> crossterm::Result<()>{
     printclosure()?;
 
     std::thread::sleep(std::time::Duration::from_millis(5000));
-
-    out.queue(terminal::Clear(terminal::ClearType::All))?
-    .queue(cursor::MoveTo(0,0))?;
 
     out.flush()?;
 

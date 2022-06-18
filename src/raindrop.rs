@@ -210,7 +210,7 @@ where T: Rng
                     .attribute(style::Attribute::Bold))
                 } else {
                     //if char is a follower, determine color lightness by subtracting the proportion
-                    //of the char within the follower from 1.0; this results in follower chars
+                    //of the char's position within the raindrop from 1.0; this results in follower chars
                     //decreasing in brightness as their distance from the leader increases
                     let follower_index: f32 = ((self.row_index - 1) - (row_index as i32)) as f32;
                     let follower_length: f32 = self.follower_content.len() as f32;
@@ -233,6 +233,8 @@ where T: Rng
         self.row_index += 1;
     }
 
+    // TODO: remove after demo is removed
+    // demo will be removed when proper animation is implemented
     pub fn set_height(&mut self, new_height: u16){
         self.row_index = new_height.into();
     }

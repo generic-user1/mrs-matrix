@@ -227,9 +227,9 @@ where T: Rng
         } 
     }
 
-    /// Moves the `Raindrop` down one row
+    /// Moves the `Raindrop` down one row.
     /// 
-    /// To reset to the top, use [reinit_state](crate::raindrop::Raindrop::reinit_state)
+    /// To reset to the top, use [reinit_state](crate::raindrop::Raindrop::reinit_state).
     pub fn move_drop(&mut self)
     {
         self.row_index += 1;
@@ -246,6 +246,32 @@ where T: Rng
 
         self.row_index < (terminal_height as i32) + (self.follower_content.len() as i32)
 
+    }
+
+    /// Advance the `Raindrop` by one 'frame'
+    /// 
+    /// `terminal_height` should be the current height of the terminal, in rows.
+    /// 
+    /// This is similar to [move_drop](crate::raindrop::Raindrop::move_drop), with one key difference:
+    /// If the `Raindrop` is not visible because it has fallen down below the bottom of the terminal,
+    /// [reinit_state](crate::raindrop::Raindrop::reinit_state) is called to re-randomize the `Raindrop` and
+    /// move it slightly above the top of the terminal.
+    /// 
+    /// If the `Raindrop` is not visible because it is above the top of the terminal, or if the `Raindrop` is visible,
+    /// this function behaves exactly like [move_drop](crate::raindrop::Raindrop::move_drop).
+    pub fn advance_animation(&mut self, terminal_height: u16)
+    {
+        // only perform visibility check if current row is not less than 0
+        // if we didn't make this check conditional, advance_animation would continuously call reinit_state
+        // as raindrops always start above row 0 but are never visible until they reach row 0
+        if !(self.row_index < 0) {
+            if !self.is_visible(terminal_height){
+                self.reinit_state(terminal_height);
+                return;
+            }
+        }
+
+        self.move_drop();
     }
 
     // TODO: remove after demo is removed

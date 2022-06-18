@@ -11,6 +11,7 @@ use crossterm::{
     terminal::{self, ClearType}, 
     cursor
 };
+use crate::raindrop::Raindrop;
 
 
 /// The main loop that renders the screen
@@ -94,6 +95,47 @@ pub fn anim_loop() -> crossterm::Result<()>
     out.queue(terminal::LeaveAlternateScreen)?
     .queue(cursor::Show)?;
     out.flush()?;
+
+    Ok(())
+}
+
+pub fn raindrop_demo() -> crossterm::Result<()>{
+    let mut out = stdout();
+
+    let termheight = terminal::size()?.1;
+
+    let mut test_drop = Raindrop::new(rand::thread_rng(), termheight);
+    
+    test_drop.set_height(termheight - 5);
+
+
+    let mut printclosure = || -> crossterm::Result<()> {
+        let mut out = stdout();
+        for row_index in 0..termheight
+        {
+            if let Some(styled_char) = test_drop.get_styled_char_at_row(row_index){
+                out.queue(PrintStyledContent(styled_char))?
+                .queue(cursor::MoveLeft(1))?;
+            }
+            out.queue(cursor::MoveDown(1))?;
+            
+        }
+        out.flush()?;
+        Ok(())
+    };
+
+    printclosure()?;
+
+    std::thread::sleep(std::time::Duration::from_millis(5000));
+
+    out.queue(terminal::Clear(terminal::ClearType::All))?
+    .queue(cursor::MoveTo(0,0))?;
+
+    out.flush()?;
+
+    printclosure()?;
+    std::thread::sleep(std::time::Duration::from_millis(5000));
+
 
     Ok(())
 }

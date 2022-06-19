@@ -1,8 +1,11 @@
 //! Raindrop structure + implementation
 
-use rand::{Rng, distributions};
+use rand::{Rng, seq::SliceRandom};
 use crossterm::style::{self, Stylize};
 use coolor::{self, Hsl};
+
+pub mod charsets;
+pub use charsets::Charset;
 
 // shortest length a follower will be
 const FOLLOWER_MIN_LENGTH: u16 = 4;
@@ -20,7 +23,7 @@ const START_OFFSET_RANGE: std::ops::RangeInclusive<i32> = -64..=-1;
 /// The leader is a continuously (per frame) randomized single character at the bottom of the raindrop.
 /// The follower is a string of characters that follow the leader. They have randomized length and content,
 /// but unlike leaders, are randomized only once (at instantiation) rather than continuously (per frame)
-pub struct Raindrop<T>
+pub struct Raindrop<'a, T>
 where T: Rng
 {
     // follower_content is ordered such that index 0 represents
@@ -35,21 +38,22 @@ where T: Rng
     // this is why an i32 must be used instead of u16
     row_index: i32,
 
+    // reference to a set of characters that will be selected from
+    // when generating pseudorandom characters
+    charset: &'a Vec<char>,
+
     // locally cached random number generator
     local_rng: T
 }
 
-impl<T> Raindrop<T> 
+impl<'a, T> Raindrop<'a, T> 
 where T: Rng
 {
 
-    /// Returns a (pseudo)randomly generated character
-    /// 
-    /// Currently only returns ASCII alphanumeric chars, 
-    /// but may be extended to return others in the future
+    /// Returns a (pseudo)randomly generated character from the internal charset
     pub fn gen_char(&mut self) -> char 
     {
-        self.local_rng.sample(distributions::Alphanumeric).into()  
+        *(self.charset.choose(&mut self.local_rng).unwrap())
     }
 
     /// Returns a new `Raindrop` instance
@@ -72,13 +76,14 @@ where T: Rng
     /// let new_raindrop_instance = Raindrop::new(rng, term_height);
     /// // do something with instance
     /// ```
-    pub fn new(existing_rng: T, terminal_height: u16) -> Self
+    pub fn new(charset: &'a Vec<char>, existing_rng: T, terminal_height: u16) -> Self
     {
         // create a new `Raindrop` instance using the passed in existing_rng.
         // use an empty vector for follower content and a zero for row index;
         // these will be overwritten by the call to reinit_state; in fact they could safely be null
         // if rust had a null type
         let mut new_instance  = Self {
+            charset,
             local_rng: existing_rng,
             follower_content: Vec::new(),
             row_index: 0

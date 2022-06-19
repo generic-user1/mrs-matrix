@@ -11,22 +11,26 @@ use crossterm::{
     cursor
 };
 use rand::{self,rngs};
-use crate::raindrop::Raindrop;
+use crate::raindrop::{self, Raindrop};
 
 /// Returns a `Vec<Raindrop>` with one `Raindrop` for each terminal column
+/// 
+/// `charset` should be a reference to a Vector of chars. This will be the set of 
+/// characters that the raindrops will be generated from
 /// 
 /// `terminal_width` should be the width of the terminal in columns
 /// 
 /// `terminal_height` should be the height of the terminal in rows
 /// 
 /// Note that this function is intentionally private because it's unlikely to be generally useful
-fn create_raindrops(terminal_width: u16, terminal_height: u16) -> Vec<Raindrop<rngs::ThreadRng>>
+fn create_raindrops(charset: &Vec<char>, terminal_width: u16, terminal_height: u16) 
+-> Vec<Raindrop<rngs::ThreadRng>>
 {
     let mut raindrop_vec: Vec<Raindrop<rngs::ThreadRng>> = Vec::with_capacity(terminal_width.into());
 
     for _ in 0..terminal_width {
         let new_rng = rand::thread_rng();
-        raindrop_vec.push(Raindrop::new(new_rng, terminal_height));
+        raindrop_vec.push(Raindrop::new(charset, new_rng, terminal_height));
     }
 
     raindrop_vec
@@ -36,16 +40,21 @@ fn create_raindrops(terminal_width: u16, terminal_height: u16) -> Vec<Raindrop<r
 /// 
 /// Returns after receiving any keypress
 /// 
+/// `charset` should be a variant of the `Charset` enum
+/// 
 /// `target_framerate` should be the number of frames per second to target
 /// 
 /// # Panics
 /// 
 /// This function panics if `target_framerate` is zero
-pub fn anim_loop(target_framerate: usize) -> crossterm::Result<()>
+pub fn anim_loop(charset: raindrop::Charset, target_framerate: usize) -> crossterm::Result<()>
 {
     
     assert!(target_framerate > 0, 
         "cannot run anim_loop at target framerate of zero");
+
+    //get actual set of characters from charset enum variant
+    let charset = charset.value();
 
     let mut out = stdout();
 
@@ -61,7 +70,8 @@ pub fn anim_loop(target_framerate: usize) -> crossterm::Result<()>
     //calculate target frame duration by dividing one second by the number of frames that should be in one second
     let target_frame_duration = Duration::from_secs_f64(1.0/(target_framerate as f64));
 
-    let mut raindrop_vector = create_raindrops(term_cols, term_rows);
+    let mut raindrop_vector = 
+        create_raindrops(&charset, term_cols, term_rows);
 
     let mut start_instant: Instant;
     loop {
@@ -103,7 +113,8 @@ pub fn anim_loop(target_framerate: usize) -> crossterm::Result<()>
                     term_cols = new_cols;
                     term_rows = new_rows;
 
-                    raindrop_vector = create_raindrops(term_cols, term_rows);
+                    raindrop_vector = 
+                        create_raindrops(&charset, term_cols, term_rows);
                 },
                 //stop loop upon recieving a mouse or key event
                 _ => break

@@ -217,9 +217,14 @@ where T: Rng
 
                     let follower_proportion = follower_index/follower_length;
                     
-                    let char_color = coolor::Color::Hsl(Hsl{
-                                                    //use of max ensures lightness is always 0 or above
-                        h:118.0, s:0.82, l:((0.9 - follower_proportion).max(0.0))});
+                    let char_color = coolor::Color::Hsl(
+                        Hsl{     
+                            h:118.0, 
+                            s:0.82,
+                            //use of max ensures lightness is always 0.1 or above 
+                            l:((0.9 - follower_proportion).max(0.1))
+                        }
+                    );
                     
                     Some(unstyled_char.with(char_color.into()))
                 }

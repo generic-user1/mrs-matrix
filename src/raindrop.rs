@@ -5,7 +5,6 @@ use crossterm::style::{self, Stylize};
 use coolor::{self, Hsl};
 
 pub mod charsets;
-pub use charsets::Charset;
 
 // shortest length a follower will be
 const FOLLOWER_MIN_LENGTH: u16 = 4;
@@ -58,6 +57,8 @@ where T: Rng
 
     /// Returns a new `Raindrop` instance
     /// 
+    /// `charset` should be a reference to Vector of chars.
+    /// 
     /// `existing_rng` should implement [Rng](rand::Rng). This is most often 
     /// [ThreadRng](rand::rngs::ThreadRng).
     /// 
@@ -73,7 +74,9 @@ where T: Rng
     ///
     /// let rng = rand::thread_rng();
     /// 
-    /// let new_raindrop_instance = Raindrop::new(rng, term_height);
+    /// let charset = vec!['a','b', 'c'];
+    /// 
+    /// let new_raindrop_instance = Raindrop::new(&charset, rng, term_height);
     /// // do something with instance
     /// ```
     pub fn new(charset: &'a Vec<char>, existing_rng: T, terminal_height: u16) -> Self

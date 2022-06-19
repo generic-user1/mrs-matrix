@@ -1,31 +1,16 @@
-//! The Charset enum containing a variety of pre-made character sets
+//! The Charset trait and a variety of pre-made character sets
 
 use std::ops::RangeInclusive;
 
-
-pub enum Charset {
-    /// ASCII letter and number characters
-    Alphanumeric,
-    /// All printable ASCII characters
-    PrintableAscii,
-    /// All printable ASCII characters plus some fun unicode symbols
-    AsciiAndSymbols
+pub trait Charset {
+    ///Return the character set as a vector of chars
+    fn get_charset(&self) -> Vec<char>;
 }
 
-impl Charset {
-
-    ///Return the associated charset for a given variant of `Charset`
-    pub fn value(&self) -> Vec<char>
-    {
-        match self {
-            Charset::Alphanumeric => Charset::gen_alphanumeric(),
-            Charset::PrintableAscii => Charset::gen_printable_ascii(),
-            Charset::AsciiAndSymbols => Charset::gen_ascii_and_symbols()
-        }
-    }
-
-    ///The function used to generate the Alphanumeric charset
-    fn gen_alphanumeric() -> Vec<char> 
+/// ASCII letter and number characters
+pub struct Alphanumeric();
+impl Charset for Alphanumeric {
+    fn get_charset(&self) -> Vec<char> 
     {
         //generate and return vector of all alphanumeric chars
         //alphanumerics make up ASCII (or UTF-8) codes 0x30 through 0x39 for digits,
@@ -37,9 +22,12 @@ impl Charset {
         for charcode in 0x61..=0x7a_u8 {outvec.push(charcode as char);}
         outvec
     }
+}
 
-    ///The function used to generate the PrintableAscii charset
-    fn gen_printable_ascii() -> Vec<char> 
+/// All printable ASCII characters
+pub struct PrintableAscii();
+impl Charset for PrintableAscii {
+    fn get_charset(&self) -> Vec<char> 
     {
         //generate and return vector of all printable ascii chars (sans the space character)
         //printable ascii chars make up codes 0x21 through 0x7E
@@ -51,12 +39,16 @@ impl Charset {
 
         outvec
     }
+}
 
-    fn gen_ascii_and_symbols() -> Vec<char>
+/// All printable ASCII characters plus some fun unicode symbols
+pub struct AsciiAndSymbols();
+impl Charset for AsciiAndSymbols {
+    fn get_charset(&self) -> Vec<char> 
     {
         //generate vector of all printable ascii chars (sans the space character)
         //then add some fun unicode symbols and return the result
-        let mut outvec = Charset::gen_printable_ascii();
+        let mut outvec = PrintableAscii().get_charset();
 
         const CHARCODE_RANGES: [RangeInclusive<u32>; 2] = [
             0x2100..=0x214F, 
@@ -70,5 +62,4 @@ impl Charset {
 
         outvec
     }
-
 }

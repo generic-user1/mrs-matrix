@@ -1,7 +1,7 @@
 use mrs_matrix::anim_loop;
-use mrs_matrix::raindrop::Charset;
+use mrs_matrix::raindrop::charsets;
 
 fn main() -> crossterm::Result<()> 
 {
-    anim_loop(Charset::AsciiAndSymbols, 25)
+    anim_loop(charsets::AsciiAndSymbols(), 25)
 }

@@ -11,7 +11,7 @@ use crossterm::{
     cursor
 };
 use rand::{self,rngs};
-use crate::raindrop::{self, Raindrop};
+use crate::raindrop::{Raindrop, charsets::Charset};
 
 /// Returns a `Vec<Raindrop>` with one `Raindrop` for each terminal column
 /// 
@@ -40,21 +40,33 @@ fn create_raindrops(charset: &Vec<char>, terminal_width: u16, terminal_height: u
 /// 
 /// Returns after receiving any keypress
 /// 
-/// `charset` should be a variant of the `Charset` enum
+/// `charset` should be an instance of a type implementing [Charset](crate::raindrop::charsets::Charset),
+/// such as [PrintableAscii](crate::raindrop::charsets::PrintableAscii)
 /// 
 /// `target_framerate` should be the number of frames per second to target
 /// 
 /// # Panics
 /// 
 /// This function panics if `target_framerate` is zero
-pub fn anim_loop(charset: raindrop::Charset, target_framerate: usize) -> crossterm::Result<()>
+/// 
+/// # Examples
+/// ```
+/// use mrs_matrix::animation::anim_loop;
+/// use mrs_matrix::raindrop::charsets::PrintableAscii;
+/// 
+/// pub fn main() -> crossterm::Result<()>
+/// {
+///     anim_loop(PrintableAscii(), 60)
+/// }
+/// ```
+pub fn anim_loop<T: Charset>(charset: T, target_framerate: usize) -> crossterm::Result<()>
 {
     
     assert!(target_framerate > 0, 
         "cannot run anim_loop at target framerate of zero");
 
     //get actual set of characters from charset enum variant
-    let charset = charset.value();
+    let charset = charset.get_charset();
 
     let mut out = stdout();
 

@@ -37,8 +37,16 @@ fn create_raindrops(terminal_width: u16, terminal_height: u16) -> Vec<Raindrop<r
 /// Returns after receiving any keypress
 /// 
 /// `target_framerate` should be the number of frames per second to target
+/// 
+/// # Panics
+/// 
+/// This function panics if `target_framerate` is zero
 pub fn anim_loop(target_framerate: usize) -> crossterm::Result<()>
 {
+    
+    assert!(target_framerate > 0, 
+        "cannot run anim_loop at target framerate of zero");
+
     let mut out = stdout();
 
     let (mut term_cols, mut term_rows) = terminal::size()?;

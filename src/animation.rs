@@ -18,16 +18,18 @@ use crate::raindrop::Raindrop;
 /// `terminal_width` should be the width of the terminal in columns
 /// 
 /// `terminal_height` should be the height of the terminal in rows
+/// 
+/// Note that this function is intentionally private because it's unlikely to be generally useful
 fn create_raindrops(terminal_width: u16, terminal_height: u16) -> Vec<Raindrop<rngs::ThreadRng>>
 {
-    let mut drop_vec: Vec<Raindrop<rngs::ThreadRng>> = Vec::with_capacity(terminal_width.into());
+    let mut raindrop_vec: Vec<Raindrop<rngs::ThreadRng>> = Vec::with_capacity(terminal_width.into());
 
     for _ in 0..terminal_width {
         let new_rng = rand::thread_rng();
-        drop_vec.push(Raindrop::new(new_rng, terminal_height));
+        raindrop_vec.push(Raindrop::new(new_rng, terminal_height));
     }
 
-    drop_vec
+    raindrop_vec
 }
 
 /// The main loop that renders the screen

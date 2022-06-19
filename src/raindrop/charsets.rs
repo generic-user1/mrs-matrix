@@ -50,8 +50,9 @@ impl Charset for AsciiAndSymbols {
         //then add some fun unicode symbols and return the result
         let mut outvec = PrintableAscii().get_charset();
 
-        const CHARCODE_RANGES: [RangeInclusive<u32>; 2] = [
-            0x2100..=0x214F, 
+        const CHARCODE_RANGES: [RangeInclusive<u32>; 3] = [
+            0x2100..=0x2138, //exclude U+2139 which doesn't always style properly on Windows
+            0x213A..=0x214F, 
             0x2A00..=0x2AFF];
 
         for charcode_range in CHARCODE_RANGES {

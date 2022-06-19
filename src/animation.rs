@@ -10,7 +10,7 @@ use crossterm::{
     terminal,
     cursor
 };
-use rand::rngs;
+use rand::{self,rngs};
 use crate::raindrop::Raindrop;
 
 /// Returns a `Vec<Raindrop>` with one `Raindrop` for each terminal column
@@ -23,7 +23,8 @@ fn create_raindrops(terminal_width: u16, terminal_height: u16) -> Vec<Raindrop<r
     let mut drop_vec: Vec<Raindrop<rngs::ThreadRng>> = Vec::with_capacity(terminal_width.into());
 
     for _ in 0..terminal_width {
-        drop_vec.push(Raindrop::new(rand::thread_rng(), terminal_height));
+        let new_rng = rand::thread_rng();
+        drop_vec.push(Raindrop::new(new_rng, terminal_height));
     }
 
     drop_vec

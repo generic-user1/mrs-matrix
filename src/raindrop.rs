@@ -12,7 +12,7 @@ const FOLLOWER_MAX_LENGTH_OFFSET: u16 = 4;
 
 // rows will start with a position offset from 0 by a value 
 // that is (pseudo)randomly selected from this range
-const START_OFFSET_RANGE: std::ops::RangeInclusive<i32> = -15..=-1;
+const START_OFFSET_RANGE: std::ops::RangeInclusive<i32> = -25..=-1;
 
 /// A `Raindrop` describes a single 'falling stream' of randomized characters
 /// 

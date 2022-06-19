@@ -1,11 +1,15 @@
 //! The Charset enum containing a variety of pre-made character sets
 
+use std::ops::RangeInclusive;
+
 
 pub enum Charset {
     /// ASCII letter and number characters
     Alphanumeric,
     /// All printable ASCII characters
-    PrintableAscii
+    PrintableAscii,
+    /// All printable ASCII characters plus some fun unicode symbols
+    AsciiAndSymbols
 }
 
 impl Charset {
@@ -15,7 +19,8 @@ impl Charset {
     {
         match self {
             Charset::Alphanumeric => Charset::gen_alphanumeric(),
-            Charset::PrintableAscii => Charset::gen_printable_ascii()
+            Charset::PrintableAscii => Charset::gen_printable_ascii(),
+            Charset::AsciiAndSymbols => Charset::gen_ascii_and_symbols()
         }
     }
 
@@ -46,4 +51,24 @@ impl Charset {
 
         outvec
     }
+
+    fn gen_ascii_and_symbols() -> Vec<char>
+    {
+        //generate vector of all printable ascii chars (sans the space character)
+        //then add some fun unicode symbols and return the result
+        let mut outvec = Charset::gen_printable_ascii();
+
+        const CHARCODE_RANGES: [RangeInclusive<u32>; 2] = [
+            0x2100..=0x214F, 
+            0x2A00..=0x2AFF];
+
+        for charcode_range in CHARCODE_RANGES {
+            for charcode in charcode_range {
+                outvec.push(char::from_u32(charcode).expect("tried to add invalid char to AsciiAndSymbols"));
+            }
+        }
+
+        outvec
+    }
+
 }

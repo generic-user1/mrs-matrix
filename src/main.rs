@@ -3,5 +3,5 @@ use mrs_matrix::raindrop::Charset;
 
 fn main() -> crossterm::Result<()> 
 {
-    anim_loop(Charset::PrintableAscii, 25)
+    anim_loop(Charset::AsciiAndSymbols, 25)
 }

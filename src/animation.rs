@@ -56,7 +56,7 @@ fn create_raindrops(charset: &Vec<char>, terminal_width: u16, terminal_height: u
 /// 
 /// pub fn main() -> crossterm::Result<()>
 /// {
-///     anim_loop(PrintableAscii(), 60)
+///     anim_loop(PrintableAscii(), 25)
 /// }
 /// ```
 pub fn anim_loop<T: Charset>(charset: T, target_framerate: usize) -> crossterm::Result<()>

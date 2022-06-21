@@ -1,6 +1,6 @@
 //! Raindrop structure + implementation
 
-use rand::{Rng, seq::SliceRandom};
+use rand::{self, Rng, rngs, seq::SliceRandom};
 use crossterm::style::{self, Stylize};
 use coolor::{self, Hsl};
 
@@ -22,8 +22,7 @@ const START_OFFSET_RANGE: std::ops::RangeInclusive<i32> = -64..=-1;
 /// The leader is a continuously (per frame) randomized single character at the bottom of the raindrop.
 /// The follower is a string of characters that follow the leader. They have randomized length and content,
 /// but unlike leaders, are randomized only once (at instantiation) rather than continuously (per frame)
-pub struct Raindrop<'a, T>
-where T: Rng
+pub struct Raindrop<'a>
 {
     // follower_content is ordered such that index 0 represents
     // the first char above the leader, index 1 represents the second, and so on
@@ -46,11 +45,10 @@ where T: Rng
     advance_chance: f64,
 
     // locally cached random number generator
-    local_rng: T
+    local_rng: rngs::ThreadRng
 }
 
-impl<'a, T> Raindrop<'a, T> 
-where T: Rng
+impl<'a> Raindrop<'a>
 {
 
     /// Returns a (pseudo)randomly generated character from the internal charset
@@ -62,9 +60,6 @@ where T: Rng
     /// Returns a new `Raindrop` instance
     /// 
     /// `charset` should be a reference to Vector of chars.
-    /// 
-    /// `existing_rng` should implement [Rng](rand::Rng). This is most often 
-    /// [ThreadRng](rand::rngs::ThreadRng).
     /// 
     /// `advance_chance` is the chance that, on any given frame, this `Raindrop` will 
     /// advance its animation. This can be any real number within the range `[0.0, 1.0)`.
@@ -80,32 +75,29 @@ where T: Rng
     /// ```
     /// use mrs_matrix::raindrop::Raindrop;
     /// use crossterm::terminal;
-    /// use rand;
     /// 
     /// let charset = vec!['a','b', 'c'];
-    /// 
-    /// let rng = rand::thread_rng();
     /// 
     /// let advance_chance = 0.75;
     /// 
     /// let term_height = terminal::size().unwrap().1;
     /// 
-    /// let new_raindrop_instance = Raindrop::new(&charset, rng, advance_chance, term_height);
+    /// let new_raindrop_instance = Raindrop::new(&charset, advance_chance, term_height);
     /// // do something with instance
     /// ```
-    pub fn new(charset: &'a Vec<char>, existing_rng: T, advance_chance: f64, terminal_height: u16) -> Self
+    pub fn new(charset: &'a Vec<char>, advance_chance: f64, terminal_height: u16) -> Self
     {
         
         assert!(advance_chance > 0.0, "Attempted to set advance chance at 0 or below");
         assert!(advance_chance <= 1.0, "Attempted to set advance chance greater than 1");
 
-        // create a new `Raindrop` instance using the passed in existing_rng.
+        // create a new `Raindrop` instance
         // use an empty vector for follower content and a zero for row index;
         // these will be overwritten by the call to reinit_state; in fact they could safely be null
         // if rust had a null type
         let mut new_instance  = Self {
             charset,
-            local_rng: existing_rng,
+            local_rng: rand::thread_rng(),
             follower_content: Vec::new(),
             row_index: 0,
             advance_chance

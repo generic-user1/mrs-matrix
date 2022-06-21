@@ -10,7 +10,6 @@ use crossterm::{
     terminal,
     cursor
 };
-use rand::{self,rngs};
 use crate::raindrop::{Raindrop, charsets::Charset};
 
 /// Returns a `Vec<Raindrop>` with one `Raindrop` for each terminal column
@@ -26,14 +25,13 @@ use crate::raindrop::{Raindrop, charsets::Charset};
 /// 
 /// Note that this function is intentionally private because it's unlikely to be generally useful
 fn create_raindrops(charset: &Vec<char>, advance_chance:f64, terminal_width: u16, terminal_height: u16) 
--> Vec<Raindrop<rngs::ThreadRng>>
+-> Vec<Raindrop>
 {
-    let mut raindrop_vec: Vec<Raindrop<rngs::ThreadRng>> = Vec::with_capacity(terminal_width.into());
+    let mut raindrop_vec: Vec<Raindrop> = Vec::with_capacity(terminal_width.into());
 
     for _ in 0..terminal_width {
-        let new_rng = rand::thread_rng();
         let new_raindrop = Raindrop::new(
-            charset, new_rng, advance_chance, terminal_height);
+            charset, advance_chance, terminal_height);
         raindrop_vec.push(new_raindrop);
     }
 

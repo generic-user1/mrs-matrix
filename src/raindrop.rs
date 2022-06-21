@@ -228,8 +228,8 @@ where T: ColorAlgorithm
 
     /// Returns the character that should be printed for a given row with appropriate styling
     /// 
-    /// Internally, uses get_styled_char to retrieve the actual character. Then applies a green
-    /// tint; brighter if the char is close to the leader, darker if further away.
+    /// Internally, uses `get_styled_char` to retrieve the actual character. Then applies a color
+    /// according to this `Raindrop`'s `color_algorithm`
     /// 
     /// The leader of the raindrop will always be styled white (and bolded).
     pub fn get_styled_char_at_row(&mut self, row_index: u16) -> Option<style::StyledContent<char>>

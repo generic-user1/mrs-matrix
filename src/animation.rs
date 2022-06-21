@@ -16,21 +16,25 @@ use crate::raindrop::{Raindrop, charsets::Charset};
 /// Returns a `Vec<Raindrop>` with one `Raindrop` for each terminal column
 /// 
 /// `charset` should be a reference to a Vector of chars. This will be the set of 
-/// characters that the raindrops will be generated from
+/// characters that the raindrops will be generated from.
+/// 
+/// `advance_chance` is the chance that a `Raindrop` will advance on any given frame.
 /// 
 /// `terminal_width` should be the width of the terminal in columns
 /// 
 /// `terminal_height` should be the height of the terminal in rows
 /// 
 /// Note that this function is intentionally private because it's unlikely to be generally useful
-fn create_raindrops(charset: &Vec<char>, terminal_width: u16, terminal_height: u16) 
+fn create_raindrops(charset: &Vec<char>, advance_chance:f64, terminal_width: u16, terminal_height: u16) 
 -> Vec<Raindrop<rngs::ThreadRng>>
 {
     let mut raindrop_vec: Vec<Raindrop<rngs::ThreadRng>> = Vec::with_capacity(terminal_width.into());
 
     for _ in 0..terminal_width {
         let new_rng = rand::thread_rng();
-        raindrop_vec.push(Raindrop::new(charset, new_rng, terminal_height));
+        let new_raindrop = Raindrop::new(
+            charset, new_rng, advance_chance, terminal_height);
+        raindrop_vec.push(new_raindrop);
     }
 
     raindrop_vec
@@ -56,10 +60,13 @@ fn create_raindrops(charset: &Vec<char>, terminal_width: u16, terminal_height: u
 /// 
 /// pub fn main() -> crossterm::Result<()>
 /// {
-///     anim_loop(PrintableAscii(), 25)
+///     let charset = PrintableAscii();
+///     let advance_chance = 0.75;
+///     let target_framerate = 25;
+///     anim_loop(charset, advance_chance, target_framerate)
 /// }
 /// ```
-pub fn anim_loop<T: Charset>(charset: T, target_framerate: usize) -> crossterm::Result<()>
+pub fn anim_loop<T: Charset>(charset: T, advance_chance:f64, target_framerate: usize) -> crossterm::Result<()>
 {
     
     assert!(target_framerate > 0, 
@@ -83,7 +90,7 @@ pub fn anim_loop<T: Charset>(charset: T, target_framerate: usize) -> crossterm::
     let target_frame_duration = Duration::from_secs_f64(1.0/(target_framerate as f64));
 
     let mut raindrop_vector = 
-        create_raindrops(&charset, term_cols, term_rows);
+        create_raindrops(&charset, advance_chance, term_cols, term_rows);
 
     let mut start_instant: Instant;
     loop {
@@ -126,7 +133,8 @@ pub fn anim_loop<T: Charset>(charset: T, target_framerate: usize) -> crossterm::
                     term_rows = new_rows;
 
                     raindrop_vector = 
-                        create_raindrops(&charset, term_cols, term_rows);
+                        create_raindrops(&charset, advance_chance, 
+                            term_cols, term_rows);
                 },
                 //stop loop upon recieving a mouse or key event
                 _ => break

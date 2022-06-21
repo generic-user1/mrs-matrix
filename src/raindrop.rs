@@ -41,6 +41,10 @@ where T: Rng
     // when generating pseudorandom characters
     charset: &'a Vec<char>,
 
+    // probability of advancing position on any given frame,
+    // defaults to 1.0, but can be any value `n` where `0.0 < n <= 1.0`
+    advance_chance: f64,
+
     // locally cached random number generator
     local_rng: T
 }
@@ -62,7 +66,15 @@ where T: Rng
     /// `existing_rng` should implement [Rng](rand::Rng). This is most often 
     /// [ThreadRng](rand::rngs::ThreadRng).
     /// 
-    /// `terminal_height` should be the current height of the terminal, in rows
+    /// `advance_chance` is the chance that, on any given frame, this `Raindrop` will 
+    /// advance its animation. This can be any real number within the range `[0.0, 1.0)`.
+    /// If the `advance_chance` is 1.0, this `Raindrop` will always advance its animation.
+    /// 
+    /// `terminal_height` should be the current height of the terminal, in rows.
+    /// 
+    ///# Panics
+    /// 
+    /// This function panics if `advance_chance` is outside the range `[0.0, 1.0)`
     /// 
     ///# Examples
     /// ```
@@ -70,17 +82,23 @@ where T: Rng
     /// use crossterm::terminal;
     /// use rand;
     /// 
-    /// let term_height = terminal::size().unwrap().1;
-    ///
-    /// let rng = rand::thread_rng();
-    /// 
     /// let charset = vec!['a','b', 'c'];
     /// 
-    /// let new_raindrop_instance = Raindrop::new(&charset, rng, term_height);
+    /// let rng = rand::thread_rng();
+    /// 
+    /// let advance_chance = 0.75;
+    /// 
+    /// let term_height = terminal::size().unwrap().1;
+    /// 
+    /// let new_raindrop_instance = Raindrop::new(&charset, rng, advance_chance, term_height);
     /// // do something with instance
     /// ```
-    pub fn new(charset: &'a Vec<char>, existing_rng: T, terminal_height: u16) -> Self
+    pub fn new(charset: &'a Vec<char>, existing_rng: T, advance_chance: f64, terminal_height: u16) -> Self
     {
+        
+        assert!(advance_chance > 0.0, "Attempted to set advance chance at 0 or below");
+        assert!(advance_chance <= 1.0, "Attempted to set advance chance greater than 1");
+
         // create a new `Raindrop` instance using the passed in existing_rng.
         // use an empty vector for follower content and a zero for row index;
         // these will be overwritten by the call to reinit_state; in fact they could safely be null
@@ -89,7 +107,8 @@ where T: Rng
             charset,
             local_rng: existing_rng,
             follower_content: Vec::new(),
-            row_index: 0
+            row_index: 0,
+            advance_chance
         };
 
         // do the work of initializing the state of the raindrop;
@@ -265,13 +284,14 @@ where T: Rng
     /// 
     /// `terminal_height` should be the current height of the terminal, in rows.
     /// 
-    /// This is similar to [move_drop](crate::raindrop::Raindrop::move_drop), with one key difference:
-    /// If the `Raindrop` is not visible because it has fallen down below the bottom of the terminal,
+    /// This is similar to [move_drop](crate::raindrop::Raindrop::move_drop), with two key differences:
+    /// - If the `Raindrop` is not visible because it has fallen down below the bottom of the terminal,
     /// [reinit_state](crate::raindrop::Raindrop::reinit_state) is called to re-randomize the `Raindrop` and
     /// move it slightly above the top of the terminal.
     /// 
-    /// If the `Raindrop` is not visible because it is above the top of the terminal, or if the `Raindrop` is visible,
-    /// this function behaves exactly like [move_drop](crate::raindrop::Raindrop::move_drop).
+    /// - If the `Raindrop` has had its `advance_chance` set to some value that is not 1.0, this function
+    /// will only have a chance of advancing this raindrop's position. If you want to move the `Raindrop` 
+    /// for certain, use the [move_drop](crate::raindrop::Raindrop::move_drop) method
     pub fn advance_animation(&mut self, terminal_height: u16)
     {
         // only perform visibility check if current row is not less than 0
@@ -283,8 +303,16 @@ where T: Rng
                 return;
             }
         }
-
-        self.move_drop();
+        
+        if self.advance_chance == 1.0 {
+            // unconditionally move if advance_chance is 1.0, skipping an uneeded rng call
+            self.move_drop();
+        }
+        else if self.local_rng.gen_bool(self.advance_chance) {
+            // if advance_chance is not 1.0, perform rng call to decide whether to move
+            self.move_drop();
+        }
+       
     }
 
 }

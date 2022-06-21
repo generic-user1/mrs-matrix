@@ -30,7 +30,7 @@ struct Args {
 
     /// Defines the character set that will be drawn from.
     #[clap(long, arg_enum, value_parser, default_value_t = CharsetType::AsciiAndSymbols)]
-    charset_type: CharsetType,
+    charset: CharsetType,
 
     /// Run in synchronized scrolling mode
     #[clap(short, long)]
@@ -49,7 +49,7 @@ fn main() -> crossterm::Result<()>
     let advance_chance = if args.sync_scrolling {1.0} else {0.75};
     let target_framerate = args.framerate;
 
-    let charset = match args.charset_type {
+    let charset = match args.charset {
         CharsetType::Alphanumeric => charsets::Alphanumeric().get_charset(),
         CharsetType::PrintableAscii => charsets::PrintableAscii().get_charset(),
         CharsetType::AsciiAndSymbols => charsets::AsciiAndSymbols().get_charset()

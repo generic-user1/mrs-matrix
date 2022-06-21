@@ -15,11 +15,18 @@ impl Charset for Alphanumeric {
         //generate and return vector of all alphanumeric chars
         //alphanumerics make up ASCII (or UTF-8) codes 0x30 through 0x39 for digits,
         //0x41 to 0x5A for capitals, and 0x61 to 0x7A for lowercase
-        //this set is 62 chars long; hence capacity of 62
+        const CHARCODE_RANGES: [RangeInclusive<u8>; 3] = [
+            0x30..=0x39,
+            0x41..=0x5a,
+            0x61..=0x7a
+        ];
+        //the length of these three combined is 62 chars; hence capacity of 62
         let mut outvec: Vec<char> = Vec::with_capacity(62);
-        for charcode in 0x30..=0x39_u8 {outvec.push(charcode as char);}
-        for charcode in 0x41..=0x5a_u8 {outvec.push(charcode as char);}
-        for charcode in 0x61..=0x7a_u8 {outvec.push(charcode as char);}
+        for charcode_range in CHARCODE_RANGES {
+            for charcode in charcode_range {
+                outvec.push(charcode as char);
+            }
+        }
         outvec
     }
 }

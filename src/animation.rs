@@ -66,7 +66,7 @@ where T: ColorAlgorithm
 /// # Examples
 /// ```
 /// use mrs_matrix::animation::anim_loop;
-/// use mrs_matrix::raindrop::charsets::PrintableAscii;
+/// use mrs_matrix::raindrop::charsets::{Charset, PrintableAscii};
 /// use mrs_matrix::raindrop::color_algorithms::LightnessDescending;
 /// 
 /// pub fn main() -> crossterm::Result<()>

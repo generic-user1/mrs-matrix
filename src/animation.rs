@@ -10,7 +10,7 @@ use crossterm::{
     terminal,
     cursor
 };
-use crate::raindrop::{Raindrop, charsets::Charset, color_algorithms::ColorAlgorithm};
+use crate::raindrop::{Raindrop, color_algorithms::ColorAlgorithm};
 
 /// Returns a `Vec<Raindrop>` with one `Raindrop` for each terminal column
 /// 
@@ -44,8 +44,8 @@ where T: ColorAlgorithm
 /// 
 /// Returns after receiving any keypress
 /// 
-/// `charset` should be an instance of a type implementing [Charset](crate::raindrop::charsets::Charset),
-/// such as [PrintableAscii](crate::raindrop::charsets::PrintableAscii)
+/// `charset` should be a `Vec<char>`. This will be the set of characters that will be
+/// displayed within the animation.
 /// 
 /// `color_algorithm` should be an instance of a type implementing [ColorAlgorithm], such as
 /// [LightnessDescending](crate::raindrop::color_algorithms::LightnessDescending).
@@ -56,6 +56,8 @@ where T: ColorAlgorithm
 /// `target_framerate` should be the number of frames per second to target.
 /// 
 /// # Panics
+/// 
+/// This function panics if `charset` is empty (i.e. has a length of zero).
 /// 
 /// This function panics if `target_framerate` is zero.
 /// 
@@ -69,7 +71,7 @@ where T: ColorAlgorithm
 /// 
 /// pub fn main() -> crossterm::Result<()>
 /// {
-///     let charset = PrintableAscii();
+///     let charset = PrintableAscii().get_charset();
 ///     let color_algorithm = LightnessDescending{
 ///         hue: 118.0,
 ///         saturation: 0.82
@@ -79,15 +81,12 @@ where T: ColorAlgorithm
 ///     anim_loop(charset, color_algorithm, advance_chance, target_framerate)
 /// }
 /// ```
-pub fn anim_loop<T: Charset, U: ColorAlgorithm>(charset: T, color_algorithm: U,
+pub fn anim_loop<T: ColorAlgorithm>(charset: Vec<char>, color_algorithm: T,
      advance_chance:f64, target_framerate: usize) -> crossterm::Result<()>
 {
-    
+    assert!(charset.len() > 0, "cannot run anim_loop with empty character set");
     assert!(target_framerate > 0, 
         "cannot run anim_loop at target framerate of zero");
-
-    //get actual set of characters from charset enum variant
-    let charset = charset.get_charset();
 
     let mut out = stdout();
 

@@ -245,13 +245,14 @@ where T: ColorAlgorithm
                     Some(unstyled_char.with(style::Color::White)
                     .attribute(style::Attribute::Bold))
                 } else {
-                    //get position in follower as a usize
-                    //we can do this unconditionally because we already checked that this value can
-                    //fit within a usize in the `get_char_at_row` method call above
-                    let position_in_follower = ((self.row_index - 1) - (row_index as i32)) as usize;
+                    //calculate follower proportion from position_in_follower and follower_length
+                    let position_in_follower = ((self.row_index - 1) - (row_index as i32)) as f32;
+                    let follower_length: f32 = self.follower_content.len() as f32;
+
+                    let follower_proportion = (position_in_follower/follower_length).min(1.0).max(0.0);
                     
                     let char_color = 
-                        self.color_algorithm.gen_color(&self, position_in_follower);
+                        self.color_algorithm.gen_color(follower_proportion);
                     
                     Some(unstyled_char.with(char_color.into()))
                 }

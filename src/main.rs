@@ -16,13 +16,13 @@ enum ColorMode {
     Blue,
     Purple,
     Red,
+    Yellow,
     Rainbow
 }
 
 #[derive(Debug, Parser)]
 #[clap(version, about, long_about = None)]
 struct Args {
-
    
     /// Defines how characters will be colored.
     #[clap(short, long, arg_enum, value_parser, default_value_t = ColorMode::Green)]
@@ -86,6 +86,14 @@ fn main() -> crossterm::Result<()>
             };
             anim_loop(charset, color_algorithm, advance_chance, target_framerate)
         },
+
+        ColorMode::Yellow => {
+            let color_algorithm = color_algorithms::LightnessDescending{
+                hue: 51.0,
+                saturation: 1.0
+            };
+            anim_loop(charset, color_algorithm, advance_chance, target_framerate)
+        }
 
         ColorMode::Rainbow => {
             let color_algorithm = color_algorithms::HueVariation{

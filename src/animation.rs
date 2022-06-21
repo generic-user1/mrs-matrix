@@ -10,7 +10,7 @@ use crossterm::{
     terminal,
     cursor
 };
-use crate::raindrop::{Raindrop, charsets::Charset};
+use crate::raindrop::{Raindrop, charsets::Charset, color_algorithms::ColorAlgorithm};
 
 /// Returns a `Vec<Raindrop>` with one `Raindrop` for each terminal column
 /// 
@@ -24,14 +24,16 @@ use crate::raindrop::{Raindrop, charsets::Charset};
 /// `terminal_height` should be the height of the terminal in rows
 /// 
 /// Note that this function is intentionally private because it's unlikely to be generally useful
-fn create_raindrops(charset: &Vec<char>, advance_chance:f64, terminal_width: u16, terminal_height: u16) 
--> Vec<Raindrop>
+fn create_raindrops<T>(charset: &Vec<char>, color_algorithm: T, 
+    advance_chance:f64, terminal_width: u16, terminal_height: u16) 
+-> Vec<Raindrop<T>>
+where T: ColorAlgorithm
 {
-    let mut raindrop_vec: Vec<Raindrop> = Vec::with_capacity(terminal_width.into());
+    let mut raindrop_vec: Vec<Raindrop<T>> = Vec::with_capacity(terminal_width.into());
 
     for _ in 0..terminal_width {
         let new_raindrop = Raindrop::new(
-            charset, advance_chance, terminal_height);
+            charset, color_algorithm, advance_chance, terminal_height);
         raindrop_vec.push(new_raindrop);
     }
 
@@ -45,6 +47,9 @@ fn create_raindrops(charset: &Vec<char>, advance_chance:f64, terminal_width: u16
 /// `charset` should be an instance of a type implementing [Charset](crate::raindrop::charsets::Charset),
 /// such as [PrintableAscii](crate::raindrop::charsets::PrintableAscii)
 /// 
+/// `color_algorithm` should be an instance of a type implementing [ColorAlgorithm], such as
+/// [LightnessDescending](crate::raindrop::color_algorithms::LightnessDescending).
+/// 
 /// `target_framerate` should be the number of frames per second to target
 /// 
 /// # Panics
@@ -55,16 +60,22 @@ fn create_raindrops(charset: &Vec<char>, advance_chance:f64, terminal_width: u16
 /// ```
 /// use mrs_matrix::animation::anim_loop;
 /// use mrs_matrix::raindrop::charsets::PrintableAscii;
+/// use mrs_matrix::raindrop::color_algorithms::LightnessDescending;
 /// 
 /// pub fn main() -> crossterm::Result<()>
 /// {
 ///     let charset = PrintableAscii();
+///     let color_algorithm = LightnessDescending{
+///         hue: 118.0,
+///         saturation: 0.82
+///     };
 ///     let advance_chance = 0.75;
 ///     let target_framerate = 25;
-///     anim_loop(charset, advance_chance, target_framerate)
+///     anim_loop(charset, color_algorithm, advance_chance, target_framerate)
 /// }
 /// ```
-pub fn anim_loop<T: Charset>(charset: T, advance_chance:f64, target_framerate: usize) -> crossterm::Result<()>
+pub fn anim_loop<T: Charset, U: ColorAlgorithm>(charset: T, color_algorithm: U,
+     advance_chance:f64, target_framerate: usize) -> crossterm::Result<()>
 {
     
     assert!(target_framerate > 0, 
@@ -88,7 +99,8 @@ pub fn anim_loop<T: Charset>(charset: T, advance_chance:f64, target_framerate: u
     let target_frame_duration = Duration::from_secs_f64(1.0/(target_framerate as f64));
 
     let mut raindrop_vector = 
-        create_raindrops(&charset, advance_chance, term_cols, term_rows);
+        create_raindrops(&charset, color_algorithm, advance_chance, 
+            term_cols, term_rows);
 
     let mut start_instant: Instant;
     loop {
@@ -131,8 +143,8 @@ pub fn anim_loop<T: Charset>(charset: T, advance_chance:f64, target_framerate: u
                     term_rows = new_rows;
 
                     raindrop_vector = 
-                        create_raindrops(&charset, advance_chance, 
-                            term_cols, term_rows);
+                        create_raindrops(&charset, color_algorithm,
+                            advance_chance, term_cols, term_rows);
                 },
                 //stop loop upon recieving a mouse or key event
                 _ => break

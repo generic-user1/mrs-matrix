@@ -2,9 +2,11 @@
 
 use rand::{self, Rng, rngs, seq::SliceRandom};
 use crossterm::style::{self, Stylize};
-use coolor::{self, Hsl};
+
+use self::color_algorithms::ColorAlgorithm;
 
 pub mod charsets;
+pub mod color_algorithms;
 
 // shortest length a follower will be
 const FOLLOWER_MIN_LENGTH: u16 = 4;
@@ -22,7 +24,8 @@ const START_OFFSET_RANGE: std::ops::RangeInclusive<i32> = -64..=-1;
 /// The leader is a continuously (per frame) randomized single character at the bottom of the raindrop.
 /// The follower is a string of characters that follow the leader. They have randomized length and content,
 /// but unlike leaders, are randomized only once (at instantiation) rather than continuously (per frame)
-pub struct Raindrop<'a>
+pub struct Raindrop<'a, T>
+where T: ColorAlgorithm
 {
     // follower_content is ordered such that index 0 represents
     // the first char above the leader, index 1 represents the second, and so on
@@ -44,11 +47,15 @@ pub struct Raindrop<'a>
     // defaults to 1.0, but can be any value `n` where `0.0 < n <= 1.0`
     advance_chance: f64,
 
+    // ColorAlgorithm implementor that is used to color follower chars
+    color_algorithm: T,
+
     // locally cached random number generator
     local_rng: rngs::ThreadRng
 }
 
-impl<'a> Raindrop<'a>
+impl<'a, T> Raindrop<'a, T>
+where T: ColorAlgorithm
 {
 
     /// Returns a (pseudo)randomly generated character from the internal charset
@@ -60,6 +67,10 @@ impl<'a> Raindrop<'a>
     /// Returns a new `Raindrop` instance
     /// 
     /// `charset` should be a reference to Vector of chars.
+    /// 
+    /// `color_algorithm` should implement 
+    /// [ColorAlgorithm](crate::raindrop::color_algorithms::ColorAlgorithm). It defines
+    /// how follower characters will be colored.
     /// 
     /// `advance_chance` is the chance that, on any given frame, this `Raindrop` will 
     /// advance its animation. This can be any real number within the range `[0.0, 1.0)`.
@@ -73,19 +84,24 @@ impl<'a> Raindrop<'a>
     /// 
     ///# Examples
     /// ```
-    /// use mrs_matrix::raindrop::Raindrop;
+    /// use mrs_matrix::raindrop::{Raindrop, color_algorithms};
     /// use crossterm::terminal;
     /// 
     /// let charset = vec!['a','b', 'c'];
+    /// 
+    /// let color_algorithm = color_algorithms::LightnessDescending{
+    ///     hue: 118.0,
+    ///     saturation: 0.82
+    /// };
     /// 
     /// let advance_chance = 0.75;
     /// 
     /// let term_height = terminal::size().unwrap().1;
     /// 
-    /// let new_raindrop_instance = Raindrop::new(&charset, advance_chance, term_height);
+    /// let new_raindrop_instance = Raindrop::new(&charset, color_algorithm, advance_chance, term_height);
     /// // do something with instance
     /// ```
-    pub fn new(charset: &'a Vec<char>, advance_chance: f64, terminal_height: u16) -> Self
+    pub fn new(charset: &'a Vec<char>, color_algorithm: T, advance_chance: f64, terminal_height: u16) -> Self
     {
         
         assert!(advance_chance > 0.0, "Attempted to set advance chance at 0 or below");
@@ -97,6 +113,7 @@ impl<'a> Raindrop<'a>
         // if rust had a null type
         let mut new_instance  = Self {
             charset,
+            color_algorithm,
             local_rng: rand::thread_rng(),
             follower_content: Vec::new(),
             row_index: 0,
@@ -228,22 +245,13 @@ impl<'a> Raindrop<'a>
                     Some(unstyled_char.with(style::Color::White)
                     .attribute(style::Attribute::Bold))
                 } else {
-                    //if char is a follower, determine color lightness by subtracting the proportion
-                    //of the char's position within the raindrop from 0.9; this results in follower chars
-                    //decreasing in brightness as their distance from the leader increases
-                    let follower_index: f32 = ((self.row_index - 1) - (row_index as i32)) as f32;
-                    let follower_length: f32 = self.follower_content.len() as f32;
-
-                    let follower_proportion = follower_index/follower_length;
+                    //get position in follower as a usize
+                    //we can do this unconditionally because we already checked that this value can
+                    //fit within a usize in the `get_char_at_row` method call above
+                    let position_in_follower = ((self.row_index - 1) - (row_index as i32)) as usize;
                     
-                    let char_color = coolor::Color::Hsl(
-                        Hsl{     
-                            h:118.0, 
-                            s:0.82,
-                            //use of max ensures lightness is always 0.1 or above 
-                            l:((0.9 - follower_proportion).max(0.1))
-                        }
-                    );
+                    let char_color = 
+                        self.color_algorithm.gen_color(&self, position_in_follower);
                     
                     Some(unstyled_char.with(char_color.into()))
                 }

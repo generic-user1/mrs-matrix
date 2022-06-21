@@ -50,11 +50,16 @@ where T: ColorAlgorithm
 /// `color_algorithm` should be an instance of a type implementing [ColorAlgorithm], such as
 /// [LightnessDescending](crate::raindrop::color_algorithms::LightnessDescending).
 /// 
-/// `target_framerate` should be the number of frames per second to target
+/// `advance_chance` should be the chance (from 0.0 to 1.0) that any one `Raindrop` will advance
+/// its movement on any given frame. This value must be within the range `[0.0, 1.0)`.
+/// 
+/// `target_framerate` should be the number of frames per second to target.
 /// 
 /// # Panics
 /// 
-/// This function panics if `target_framerate` is zero
+/// This function panics if `target_framerate` is zero.
+/// 
+/// This function panics if `advance_chance` is outside the range `[0.0, 1.0)`
 /// 
 /// # Examples
 /// ```

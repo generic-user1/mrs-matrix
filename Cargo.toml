@@ -1,10 +1,12 @@
 [package]
 name = "mrs-matrix"
+authors = ["generic-user1"]
 description = "A multiplatform Rust clone of cmatrix"
-version = "0.1.0"
+repository = "https://github.com/generic-user1/mrs-matrix"
 edition = "2021"
 license = "MIT"
 readme = "README.md"
+version = "1.0.0"
 
 
 [dependencies]

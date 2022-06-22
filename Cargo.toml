@@ -9,7 +9,7 @@ license = "MIT"
 readme = "README.md"
 keywords = ["matrix", "cmatrix", "multiplatform"]
 categories = ["command-line-utilities", "games"]
-version = "1.0.0"
+version = "1.0.1"
 
 
 [dependencies]

@@ -3,6 +3,7 @@ name = "mrs-matrix"
 authors = ["generic-user1"]
 description = "A multiplatform Rust clone of cmatrix"
 repository = "https://github.com/generic-user1/mrs-matrix"
+documentation = "https://docs.rs/mrs-matrix/latest"
 edition = "2021"
 license = "MIT"
 readme = "README.md"

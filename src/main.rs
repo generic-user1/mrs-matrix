@@ -1,7 +1,7 @@
 use mrs_matrix::anim_loop;
 use mrs_matrix::raindrop::charsets::Charset;
 use mrs_matrix::raindrop::{charsets, color_algorithms};
-use clap::{ArgEnum, Parser};
+use clap::{ArgEnum, ArgGroup, Parser};
 
 #[derive(Debug, Clone, Copy, ArgEnum)]
 enum CharsetType {
@@ -22,6 +22,10 @@ enum ColorMode {
 
 #[derive(Debug, Parser)]
 #[clap(version, about, long_about = None)]
+#[clap(group(
+    ArgGroup::new("charsetgroup")
+    .args(&["charset", "custom-charset"]),
+))]
 struct Args {
    
     /// Defines how characters will be colored.
@@ -38,7 +42,11 @@ struct Args {
 
     /// Sets the target framerate
     #[clap(short, long, value_parser=framerate_in_range, default_value_t = 25)]
-    framerate: usize
+    framerate: usize,
+
+    /// Custom character set passed as a string
+    #[clap(long)]
+    custom_charset: Option<String>
 
 }
 
@@ -49,10 +57,14 @@ fn main() -> crossterm::Result<()>
     let advance_chance = if args.sync_scrolling {1.0} else {0.75};
     let target_framerate = args.framerate;
 
-    let charset = match args.charset {
-        CharsetType::Alphanumeric => charsets::Alphanumeric().get_charset(),
-        CharsetType::PrintableAscii => charsets::PrintableAscii().get_charset(),
-        CharsetType::AsciiAndSymbols => charsets::AsciiAndSymbols().get_charset()
+    let charset = if args.custom_charset == None {
+        match args.charset {
+            CharsetType::Alphanumeric => charsets::Alphanumeric().get_charset(),
+            CharsetType::PrintableAscii => charsets::PrintableAscii().get_charset(),
+            CharsetType::AsciiAndSymbols => charsets::AsciiAndSymbols().get_charset(),
+        }
+    } else {
+        args.custom_charset.unwrap().chars().collect()
     };
 
     //we need a seperate call to anim_loop for each possible type of ColorAlgorithm

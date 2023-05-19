@@ -10,7 +10,7 @@ You first need the Rust environment: [https://rustup.rs](https://rustup.rs)
 
 ### Install from the repository
 
-(recommended if you don't intent to modify the program)
+(recommended if you don't intend to modify the program)
 
     cargo install mrs-matrix --locked
 

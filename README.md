@@ -4,14 +4,27 @@ A **m**ultiplatform **R**u**s**t clone of [cmatrix](https://github.com/abishekva
 
 Unlike the original cmatrix, supports both Windows and most flavors of Linux. May also support macOS, though this is untested.
 
-## Installation instructions
-1. Install [rust](https://www.rust-lang.org/tools/install) using `rustup` (this installs [cargo](https://doc.rust-lang.org/cargo/), the Rust Package Manager)
-2. Clone this repository locally with `git clone https://github.com/generic-user1/mrs-matrix.git`
-3. Enter the directory of the repository with `cd mrs-matrix`
-4. Install the project with `cargo install --path .`
-5. Run your newly compiled binary with `mrs-matrix`. To get a list of possible options, run `mrs-matrix --help`
+## Installation
 
-Note that the project can be run without installation using `cargo run --release`. Any arguments to `mrs-matrix` when running through `cargo` must be prefixed by `--` (e.g. `cargo run --release -- -c blue`)
+You first need the Rust environment: [https://rustup.rs](https://rustup.rs)
+
+### Install from the repository
+
+(recommanded if you don't intent to modify the program)
+
+    cargo install mrs-matrix --locked
+
+### Install from source
+
+1. Clone this repository locally with `git clone https://github.com/generic-user1/mrs-matrix.git`
+2. Enter the directory of the repository with `cd mrs-matrix`
+3. Install the project with `cargo install --path .`
+
+## Usage
+
+Run `mrs-matrix`
+
+To get a list of possible options, run `mrs-matrix --help`
 
 ## Dependencies
 

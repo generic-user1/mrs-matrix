@@ -23,12 +23,12 @@ use std::time::{Duration, Instant};
 ///
 /// Note that this function is intentionally private because it's unlikely to be generally useful
 fn create_raindrops<T>(
-    charset: &Vec<char>,
+    charset: &[char],
     color_algorithm: T,
     advance_chance: f64,
     terminal_width: u16,
     terminal_height: u16
-) -> Vec<Raindrop<T>>
+) -> Vec<Raindrop<'_, T>>
 where
     T: ColorAlgorithm
 {
@@ -46,14 +46,14 @@ where
 ///
 /// Returns after receiving any keypress
 ///
-/// `charset` should be a `Vec<char>`. This will be the set of characters that will be
+/// `charset` should be a `&[char]`. This will be the set of characters that will be
 /// displayed within the animation.
 ///
 /// `color_algorithm` should be an instance of a type implementing [ColorAlgorithm], such as
 /// [LightnessDescending](crate::raindrop::color_algorithms::LightnessDescending).
 ///
 /// `advance_chance` should be the chance (from 0.0 to 1.0) that any one `Raindrop` will advance
-/// its movement on any given frame. This value must be within the range `[0.0, 1.0)`.
+/// its movement on any given frame. This value must be within the range `(0.0, 1.0]`.
 ///
 /// `target_framerate` should be the number of frames per second to target.
 ///
@@ -63,7 +63,7 @@ where
 ///
 /// This function panics if `target_framerate` is zero.
 ///
-/// This function panics if `advance_chance` is outside the range `[0.0, 1.0)`
+/// This function panics if `advance_chance` is outside the range `(0.0, 1.0]`
 ///
 /// # Examples
 /// ```
@@ -84,13 +84,13 @@ where
 /// }
 /// ```
 pub fn anim_loop<T: ColorAlgorithm>(
-    charset: Vec<char>,
+    charset: &[char],
     color_algorithm: T,
     advance_chance: f64,
     target_framerate: usize
 ) -> crossterm::Result<()> {
     assert!(
-        charset.len() > 0,
+        !charset.is_empty(),
         "cannot run anim_loop with empty character set"
     );
     assert!(
@@ -113,7 +113,7 @@ pub fn anim_loop<T: ColorAlgorithm>(
     let target_frame_duration = Duration::from_secs_f64(1.0 / (target_framerate as f64));
 
     let mut raindrop_vector = create_raindrops(
-        &charset,
+        charset,
         color_algorithm,
         advance_chance,
         term_cols,
@@ -160,7 +160,7 @@ pub fn anim_loop<T: ColorAlgorithm>(
                     term_rows = new_rows;
 
                     raindrop_vector = create_raindrops(
-                        &charset,
+                        charset,
                         color_algorithm,
                         advance_chance,
                         term_cols,

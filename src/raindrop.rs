@@ -42,7 +42,7 @@ where
 
     // reference to a set of characters that will be selected from
     // when generating pseudorandom characters
-    charset: &'a Vec<char>,
+    charset: &'a [char],
 
     // probability of advancing position on any given frame,
     // defaults to 1.0, but can be any value `n` where `0.0 < n <= 1.0`
@@ -102,7 +102,7 @@ where
     /// // do something with instance
     /// ```
     pub fn new(
-        charset: &'a Vec<char>,
+        charset: &'a [char],
         color_algorithm: T,
         advance_chance: f64,
         terminal_height: u16

@@ -74,7 +74,7 @@ fn main() -> crossterm::Result<()> {
                 hue: 118.0,
                 saturation: 1.0
             };
-            anim_loop(charset, color_algorithm, advance_chance, target_framerate)
+            anim_loop(&charset, color_algorithm, advance_chance, target_framerate)
         }
 
         ColorMode::Blue => {
@@ -82,7 +82,7 @@ fn main() -> crossterm::Result<()> {
                 hue: 244.0,
                 saturation: 1.0
             };
-            anim_loop(charset, color_algorithm, advance_chance, target_framerate)
+            anim_loop(&charset, color_algorithm, advance_chance, target_framerate)
         }
 
         ColorMode::Purple => {
@@ -90,7 +90,7 @@ fn main() -> crossterm::Result<()> {
                 hue: 302.0,
                 saturation: 1.0
             };
-            anim_loop(charset, color_algorithm, advance_chance, target_framerate)
+            anim_loop(&charset, color_algorithm, advance_chance, target_framerate)
         }
 
         ColorMode::Red => {
@@ -98,7 +98,7 @@ fn main() -> crossterm::Result<()> {
                 hue: 0.0,
                 saturation: 1.0
             };
-            anim_loop(charset, color_algorithm, advance_chance, target_framerate)
+            anim_loop(&charset, color_algorithm, advance_chance, target_framerate)
         }
 
         ColorMode::Yellow => {
@@ -106,7 +106,7 @@ fn main() -> crossterm::Result<()> {
                 hue: 51.0,
                 saturation: 1.0
             };
-            anim_loop(charset, color_algorithm, advance_chance, target_framerate)
+            anim_loop(&charset, color_algorithm, advance_chance, target_framerate)
         }
 
         ColorMode::Rainbow => {
@@ -114,7 +114,7 @@ fn main() -> crossterm::Result<()> {
                 saturation: 1.0,
                 lightness: 0.5
             };
-            anim_loop(charset, color_algorithm, advance_chance, target_framerate)
+            anim_loop(&charset, color_algorithm, advance_chance, target_framerate)
         }
     }
 }

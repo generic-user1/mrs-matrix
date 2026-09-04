@@ -1,4 +1,8 @@
 //! Algorithms that determine the color of `Raindrop` follower characters
+use std::ops::{Range, RangeInclusive};
+
+const UNIT_INTERVAL: RangeInclusive<f32> = 0.0..=1.0;
+const DEG_INTERVAL: Range<f32> = 0.0..360.0;
 
 use coolor::{Color, Hsl};
 
@@ -16,9 +20,9 @@ pub trait ColorAlgorithm: Sized + Copy {
 
 /// Colors characters with varying lightness according to their distance from the leader
 ///
-/// `hue` is the hue degree of the base color. It must be within the range `(0.0, 360.0]`.
+/// `hue` is the hue degree of the base color. It must be within the range `[0.0, 360.0)`.
 ///
-/// `saturation` is the saturation amount of the base color. It must be within the range `(0.0, 1.0)`.
+/// `saturation` is the saturation amount of the base color. It must be within the range `[0.0, 1.0]`.
 ///
 ///# Notes
 ///
@@ -31,16 +35,16 @@ pub struct LightnessDescending {
 impl ColorAlgorithm for LightnessDescending {
     fn gen_color(&self, follower_proportion: f32) -> Color {
         assert!(
-            follower_proportion >= 0.0 && follower_proportion <= 1.0,
-            "follower_proportion outside of expected bounds (0, 1)"
+            UNIT_INTERVAL.contains(&follower_proportion),
+            "follower_proportion outside of expected bounds [0, 1]"
         );
         assert!(
-            self.hue >= 0.0 && self.hue < 360.0,
-            "hue outside of expected bounds (0, 360]"
+            DEG_INTERVAL.contains(&self.hue),
+            "hue outside of expected bounds [0, 360)"
         );
         assert!(
-            self.saturation >= 0.0 && self.saturation <= 1.0,
-            "saturation outside of expected bounds (0, 1)"
+            UNIT_INTERVAL.contains(&self.saturation),
+            "saturation outside of expected bounds [0, 1]"
         );
 
         //determine color lightness by subtracting the follower_proportion from 0.9;
@@ -58,9 +62,9 @@ impl ColorAlgorithm for LightnessDescending {
 
 /// Colors characters with varying saturation according to their distance from the leader
 ///
-/// `hue` is the hue degree of the base color. It must be within the range `(0.0, 360.0]`.
+/// `hue` is the hue degree of the base color. It must be within the range `[0, 360)`.
 ///
-/// `lightness` is the lightness amount of the base color. It must be within the range `(0.0, 1.0)`.
+/// `lightness` is the lightness amount of the base color. It must be within the range `[0.0, 1.0]`.
 ///
 ///# Notes
 ///
@@ -73,16 +77,16 @@ pub struct SaturationDescending {
 impl ColorAlgorithm for SaturationDescending {
     fn gen_color(&self, follower_proportion: f32) -> Color {
         assert!(
-            follower_proportion >= 0.0 && follower_proportion <= 1.0,
-            "follower_proportion outside of expected bounds (0, 1)"
+            UNIT_INTERVAL.contains(&follower_proportion),
+            "follower_proportion outside of expected bounds [0, 1]"
         );
         assert!(
-            self.hue >= 0.0 && self.hue < 360.0,
-            "hue outside of expected bounds (0, 360]"
+            DEG_INTERVAL.contains(&self.hue),
+            "hue outside of expected bounds [0, 360)"
         );
         assert!(
-            self.lightness >= 0.0 && self.lightness <= 1.0,
-            "lightness outside of expected bounds (0, 1)"
+            UNIT_INTERVAL.contains(&self.lightness),
+            "lightness outside of expected bounds [0, 1]"
         );
 
         //determine color saturation by subtracting the follower_proportion from 1.0;
@@ -99,9 +103,9 @@ impl ColorAlgorithm for SaturationDescending {
 
 /// Colors characters with varying hue according to their distance from the leader
 ///
-/// `saturation` is the saturation amount of the base color. It must be within the range `(0.0, 1.0)`.
+/// `saturation` is the saturation amount of the base color. It must be within the range `[0.0, 1.0]`.
 ///
-/// `lightness` is the lightness amount of the base color. It must be within the range `(0.0, 1.0)`.
+/// `lightness` is the lightness amount of the base color. It must be within the range `[0.0, 1.0]`.
 ///
 ///# Notes
 ///  
@@ -114,16 +118,16 @@ pub struct HueVariation {
 impl ColorAlgorithm for HueVariation {
     fn gen_color(&self, follower_proportion: f32) -> Color {
         assert!(
-            follower_proportion >= 0.0 && follower_proportion <= 1.0,
-            "follower_proportion outside of expected bounds (0, 1)"
+            UNIT_INTERVAL.contains(&follower_proportion),
+            "follower_proportion outside of expected bounds [0, 1]"
         );
         assert!(
-            self.saturation >= 0.0 && self.saturation <= 1.0,
-            "saturation outside of expected bounds (0, 1)"
+            UNIT_INTERVAL.contains(&self.saturation),
+            "saturation outside of expected bounds [0, 1]"
         );
         assert!(
-            self.lightness >= 0.0 && self.lightness <= 1.0,
-            "lightness outside of expected bounds (0, 1)"
+            UNIT_INTERVAL.contains(&self.lightness),
+            "lightness outside of expected bounds [0, 1]"
         );
 
         //determine color hue by multiplying follower proportion by 360,

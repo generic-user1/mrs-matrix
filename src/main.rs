@@ -1,7 +1,7 @@
+use clap::{ArgEnum, ArgGroup, Parser};
 use mrs_matrix::anim_loop;
 use mrs_matrix::raindrop::charsets::Charset;
 use mrs_matrix::raindrop::{charsets, color_algorithms};
-use clap::{ArgEnum, ArgGroup, Parser};
 
 #[derive(Debug, Clone, Copy, ArgEnum)]
 enum CharsetType {
@@ -27,7 +27,6 @@ enum ColorMode {
     .args(&["charset", "custom-charset"]),
 ))]
 struct Args {
-   
     /// Defines how characters will be colored.
     #[clap(short, long, arg_enum, value_parser, default_value_t = ColorMode::Green)]
     color_mode: ColorMode,
@@ -47,21 +46,19 @@ struct Args {
     /// Custom character set passed as a string
     #[clap(long)]
     custom_charset: Option<String>
-
 }
 
-fn main() -> crossterm::Result<()> 
-{
+fn main() -> crossterm::Result<()> {
     let args = Args::parse();
 
-    let advance_chance = if args.sync_scrolling {1.0} else {0.75};
+    let advance_chance = if args.sync_scrolling { 1.0 } else { 0.75 };
     let target_framerate = args.framerate;
 
     let charset = if args.custom_charset == None {
         match args.charset {
             CharsetType::Alphanumeric => charsets::Alphanumeric().get_charset(),
             CharsetType::PrintableAscii => charsets::PrintableAscii().get_charset(),
-            CharsetType::AsciiAndSymbols => charsets::AsciiAndSymbols().get_charset(),
+            CharsetType::AsciiAndSymbols => charsets::AsciiAndSymbols().get_charset()
         }
     } else {
         args.custom_charset.unwrap().chars().collect()
@@ -70,42 +67,42 @@ fn main() -> crossterm::Result<()>
     //we need a seperate call to anim_loop for each possible type of ColorAlgorithm
     //to avoid this, we would need to use a trait object (like Box<dyn ColorAlgorithm>),
     //but that would incur a runtime penalty that we could like to avoid
-    
+
     match args.color_mode {
         ColorMode::Green => {
-            let color_algorithm = color_algorithms::LightnessDescending{
+            let color_algorithm = color_algorithms::LightnessDescending {
                 hue: 118.0,
                 saturation: 1.0
             };
             anim_loop(charset, color_algorithm, advance_chance, target_framerate)
-        },
-        
+        }
+
         ColorMode::Blue => {
-            let color_algorithm = color_algorithms::LightnessDescending{
+            let color_algorithm = color_algorithms::LightnessDescending {
                 hue: 244.0,
                 saturation: 1.0
             };
             anim_loop(charset, color_algorithm, advance_chance, target_framerate)
-        },
+        }
 
         ColorMode::Purple => {
-            let color_algorithm = color_algorithms::LightnessDescending{
+            let color_algorithm = color_algorithms::LightnessDescending {
                 hue: 302.0,
                 saturation: 1.0
             };
             anim_loop(charset, color_algorithm, advance_chance, target_framerate)
-        },
+        }
 
         ColorMode::Red => {
-            let color_algorithm = color_algorithms::LightnessDescending{
+            let color_algorithm = color_algorithms::LightnessDescending {
                 hue: 0.0,
                 saturation: 1.0
             };
             anim_loop(charset, color_algorithm, advance_chance, target_framerate)
-        },
+        }
 
         ColorMode::Yellow => {
-            let color_algorithm = color_algorithms::LightnessDescending{
+            let color_algorithm = color_algorithms::LightnessDescending {
                 hue: 51.0,
                 saturation: 1.0
             };
@@ -113,19 +110,20 @@ fn main() -> crossterm::Result<()>
         }
 
         ColorMode::Rainbow => {
-            let color_algorithm = color_algorithms::HueVariation{
-                saturation: 1.0, lightness: 0.5
+            let color_algorithm = color_algorithms::HueVariation {
+                saturation: 1.0,
+                lightness: 0.5
             };
             anim_loop(charset, color_algorithm, advance_chance, target_framerate)
         }
     }
-        
 }
 
 /// framerate parser/validator function
-fn framerate_in_range(s: &str) -> Result<usize, String>
-{
-    let framerate: usize = s.parse().map_err(|_| format!("\"{}\" isn't a valid integer", s))?;
+fn framerate_in_range(s: &str) -> Result<usize, String> {
+    let framerate: usize = s
+        .parse()
+        .map_err(|_| format!("\"{}\" isn't a valid integer", s))?;
 
     if framerate == 0 {
         Err(format!("framerate cannot be zero"))

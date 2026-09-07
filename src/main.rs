@@ -54,14 +54,14 @@ fn main() -> crossterm::Result<()> {
     let advance_chance = if args.sync_scrolling { 1.0 } else { 0.75 };
     let target_framerate = args.framerate;
 
-    let charset = if args.custom_charset == None {
+    let charset = if let Some(charset) = args.custom_charset {
+        charset.chars().collect()
+    } else {
         match args.charset {
             CharsetType::Alphanumeric => charsets::Alphanumeric().get_charset(),
             CharsetType::PrintableAscii => charsets::PrintableAscii().get_charset(),
             CharsetType::AsciiAndSymbols => charsets::AsciiAndSymbols().get_charset()
         }
-    } else {
-        args.custom_charset.unwrap().chars().collect()
     };
 
     //we need a seperate call to anim_loop for each possible type of ColorAlgorithm
@@ -126,7 +126,7 @@ fn framerate_in_range(s: &str) -> Result<usize, String> {
         .map_err(|_| format!("\"{}\" isn't a valid integer", s))?;
 
     if framerate == 0 {
-        Err(format!("framerate cannot be zero"))
+        Err("framerate cannot be zero".to_owned())
     } else {
         Ok(framerate)
     }

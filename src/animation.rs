@@ -15,7 +15,7 @@ use std::time::{Duration, Instant};
 /// `charset` should be a reference to a Vector of chars. This will be the set of
 /// characters that the raindrops will be generated from.
 ///
-/// `advance_chance` is the chance that a `Raindrop` will advance on any given frame.
+/// `speed` is the distance (in rows) that a `Raindrop` will advance on any given frame.
 ///
 /// `terminal_width` should be the width of the terminal in columns
 ///
@@ -25,7 +25,7 @@ use std::time::{Duration, Instant};
 fn create_raindrops<T>(
     charset: &[char],
     color_algorithm: T,
-    advance_chance: f64,
+    speed: f64,
     terminal_width: u16,
     terminal_height: u16
 ) -> Vec<Raindrop<'_, T>>
@@ -35,7 +35,7 @@ where
     let mut raindrop_vec: Vec<Raindrop<T>> = Vec::with_capacity(terminal_width.into());
 
     for _ in 0..terminal_width {
-        let new_raindrop = Raindrop::new(charset, color_algorithm, advance_chance, terminal_height);
+        let new_raindrop = Raindrop::new(charset, color_algorithm, speed, terminal_height);
         raindrop_vec.push(new_raindrop);
     }
 
@@ -52,8 +52,7 @@ where
 /// `color_algorithm` should be an instance of a type implementing [ColorAlgorithm], such as
 /// [LightnessDescending](crate::raindrop::color_algorithms::LightnessDescending).
 ///
-/// `advance_chance` should be the chance (from 0.0 to 1.0) that any one `Raindrop` will advance
-/// its movement on any given frame. This value must be within the range `(0.0, 1.0]`.
+/// `speed` is the distance that a `Raindrop` will advance by on any given frame, measured in rows.
 ///
 /// `target_framerate` should be the number of frames per second to target.
 ///
@@ -62,8 +61,6 @@ where
 /// This function panics if `charset` is empty (i.e. has a length of zero).
 ///
 /// This function panics if `target_framerate` is zero.
-///
-/// This function panics if `advance_chance` is outside the range `(0.0, 1.0]`
 ///
 /// # Examples
 /// ```
@@ -78,15 +75,15 @@ where
 ///         hue: 118.0,
 ///         saturation: 0.82
 ///     };
-///     let advance_chance = 0.75;
+///     let speed = 0.75;
 ///     let target_framerate = 25;
-///     anim_loop(charset, color_algorithm, advance_chance, target_framerate)
+///     anim_loop(charset, color_algorithm, speed, target_framerate)
 /// }
 /// ```
 pub fn anim_loop<T: ColorAlgorithm>(
     charset: &[char],
     color_algorithm: T,
-    advance_chance: f64,
+    speed: f64,
     target_framerate: usize
 ) -> crossterm::Result<()> {
     assert!(
@@ -112,13 +109,8 @@ pub fn anim_loop<T: ColorAlgorithm>(
     //calculate target frame duration by dividing one second by the number of frames that should be in one second
     let target_frame_duration = Duration::from_secs_f64(1.0 / (target_framerate as f64));
 
-    let mut raindrop_vector = create_raindrops(
-        charset,
-        color_algorithm,
-        advance_chance,
-        term_cols,
-        term_rows
-    );
+    let mut raindrop_vector =
+        create_raindrops(charset, color_algorithm, speed, term_cols, term_rows);
 
     let mut start_instant: Instant;
     loop {
@@ -159,13 +151,8 @@ pub fn anim_loop<T: ColorAlgorithm>(
                     term_cols = new_cols;
                     term_rows = new_rows;
 
-                    raindrop_vector = create_raindrops(
-                        charset,
-                        color_algorithm,
-                        advance_chance,
-                        term_cols,
-                        term_rows
-                    );
+                    raindrop_vector =
+                        create_raindrops(charset, color_algorithm, speed, term_cols, term_rows);
                 }
                 //stop loop upon recieving a mouse or key event
                 _ => break

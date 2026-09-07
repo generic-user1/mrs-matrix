@@ -16,7 +16,7 @@ const FOLLOWER_MAX_LENGTH_OFFSET: u16 = 4;
 
 // rows will start with a position offset from 0 by a value
 // that is (pseudo)randomly selected from this range
-const START_OFFSET_RANGE: std::ops::RangeInclusive<i32> = -64..=-1;
+const START_OFFSET_RANGE: std::ops::RangeInclusive<f64> = -64.0..=-1.0;
 
 /// A `Raindrop` describes a single 'falling stream' of randomized characters
 ///
@@ -36,17 +36,16 @@ where
 
     // row index representing the terminal row that the leader is on
     // the follower will be on indecies below this value
-    // note that this value may be negative or greater than the terminal height;
-    // this is why an i32 must be used instead of u16
-    row_index: i32,
+    // the integer component of this value represents the actual row the leader is on,
+    // the the fractional component is used to support speeds that aren't whole rows at a time
+    row_index: f64,
 
     // reference to a set of characters that will be selected from
     // when generating pseudorandom characters
     charset: &'a [char],
 
-    // probability of advancing position on any given frame,
-    // defaults to 1.0, but can be any value `n` where `0.0 < n <= 1.0`
-    advance_chance: f64,
+    // speed, in rows, that this raindrop will advance per frame
+    speed: f64,
 
     // ColorAlgorithm implementor that is used to color follower chars
     color_algorithm: T,
@@ -72,15 +71,11 @@ where
     /// [ColorAlgorithm](crate::raindrop::color_algorithms::ColorAlgorithm). It defines
     /// how follower characters will be colored.
     ///
-    /// `advance_chance` is the chance that, on any given frame, this `Raindrop` will
-    /// advance its animation. This can be any real number within the range `[0.0, 1.0)`.
-    /// If the `advance_chance` is 1.0, this `Raindrop` will always advance its animation.
+    /// `speed` is the distance that this `Raindrop` will advance by each frame, measured in rows.
+    /// A speed of 1.0 means the `Raindrop` will advance by one row per frame, a speed of 2.0 means it will advance
+    /// two rows per frame, a speed of 0.5 means the `Raindrop` will advance by one row every two frames, etc.
     ///
     /// `terminal_height` should be the current height of the terminal, in rows.
-    ///
-    ///# Panics
-    ///
-    /// This function panics if `advance_chance` is outside the range `[0.0, 1.0)`
     ///
     ///# Examples
     /// ```
@@ -94,28 +89,14 @@ where
     ///     saturation: 0.82
     /// };
     ///
-    /// let advance_chance = 0.75;
+    /// let speed = 0.75;
     ///
     /// let term_height = terminal::size().unwrap().1;
     ///
-    /// let new_raindrop_instance = Raindrop::new(&charset, color_algorithm, advance_chance, term_height);
+    /// let new_raindrop_instance = Raindrop::new(&charset, color_algorithm, speed, term_height);
     /// // do something with instance
     /// ```
-    pub fn new(
-        charset: &'a [char],
-        color_algorithm: T,
-        advance_chance: f64,
-        terminal_height: u16
-    ) -> Self {
-        assert!(
-            advance_chance > 0.0,
-            "Attempted to set advance chance at 0 or below"
-        );
-        assert!(
-            advance_chance <= 1.0,
-            "Attempted to set advance chance greater than 1"
-        );
-
+    pub fn new(charset: &'a [char], color_algorithm: T, speed: f64, terminal_height: u16) -> Self {
         // create a new `Raindrop` instance
         // use an empty vector for follower content and a zero for row index;
         // these will be overwritten by the call to reinit_state; in fact they could safely be null
@@ -125,8 +106,8 @@ where
             color_algorithm,
             local_rng: rand::thread_rng(),
             follower_content: Vec::new(),
-            row_index: 0,
-            advance_chance
+            row_index: 0.0,
+            speed
         };
 
         // do the work of initializing the state of the raindrop;
@@ -184,6 +165,12 @@ where
         // don't return anything
     }
 
+    /// Get the integer portion of this `Raindrop`'s row index
+    const fn int_row_index(&self) -> i32 {
+        // the `as` here performs a saturating cast, which is what we want
+        self.row_index.trunc() as i32
+    }
+
     /// Returns the character that should be printed for a given row
     ///
     /// # Notes
@@ -194,18 +181,20 @@ where
     /// If this instance does have a char for the provided row, `Some(char)` is returned.
     pub fn get_char_at_row(&mut self, row_index: u16) -> Option<char> {
         // cast provided row index to i32 and bind to a more clear name
-        // we only want to accept valid u16 values, but need the value to be an i32 for
-        // comparisons and math with self.row_index
-        let provided_row_index: i32 = row_index.into();
+        // we only want to accept valid u16 values, but want the value to be an i32 for
+        // comparisons and math with our own row index
+        let provided_row_index = row_index as i32;
+
+        let our_row_index = self.int_row_index();
 
         // return None immediately if provided row is beyond this Raindrop's row
-        if self.row_index < provided_row_index {
+        if our_row_index < provided_row_index {
             return None;
         }
 
         // return a randomly selected char if provided row index points to the leader of this Raindrop
         // (i.e. if the provided row index and current row index match exactly)
-        if self.row_index == provided_row_index {
+        if our_row_index == provided_row_index {
             return Some(self.gen_char());
         }
 
@@ -215,13 +204,13 @@ where
 
         // find the index within follower_content that provided_row_index should point to,
         // keeping min mind that follower starts 1 row above (less than) row_index
-        match TryInto::<usize>::try_into((self.row_index - 1) - provided_row_index) {
+        match TryInto::<usize>::try_into((our_row_index - 1) - provided_row_index) {
             Err(_) => {
                 //if follower_index can't be represented as a usize for whatever reason,
                 //print a warning to stderr and return None
                 eprintln!(
                     "Failed to represent follower_index ({}) as a usize; skipping char",
-                    (self.row_index - 1) - provided_row_index
+                    (our_row_index - 1) - provided_row_index
                 );
                 None
             }
@@ -252,8 +241,9 @@ where
                     )
                 } else {
                     //calculate follower proportion from position_in_follower and follower_length
-                    let position_in_follower = ((self.row_index - 1) - (row_index as i32)) as f32;
-                    let follower_length: f32 = self.follower_content.len() as f32;
+                    let position_in_follower =
+                        ((self.int_row_index() - 1) - (row_index as i32)) as f32;
+                    let follower_length = self.follower_content.len() as f32;
 
                     let follower_proportion =
                         (position_in_follower / follower_length).clamp(0.0, 1.0);
@@ -266,50 +256,41 @@ where
         }
     }
 
-    /// Moves the `Raindrop` down one row.
+    /// Moves the `Raindrop` down by a distance determined by its speed.
     ///
     /// To reset to the top, use [reinit_state](crate::raindrop::Raindrop::reinit_state).
     pub fn move_drop(&mut self) {
-        self.row_index += 1;
+        self.row_index += self.speed
     }
 
     /// Returns `true` if Raindrop displays any chars on a terminal of height `terminal_height`; `false` otherwise
     pub fn is_visible(&self, terminal_height: u16) -> bool {
         // if row_index is less than zero, return false immediately
-        if self.row_index < 0 {
+        let row_index = self.int_row_index();
+        if row_index < 0 {
             return false;
         }
 
-        self.row_index < (terminal_height as i32) + (self.follower_content.len() as i32)
+        row_index < (terminal_height as i32) + (self.follower_content.len() as i32)
     }
 
     /// Advance the `Raindrop` by one 'frame'
     ///
     /// `terminal_height` should be the current height of the terminal, in rows.
     ///
-    /// This is similar to [move_drop](crate::raindrop::Raindrop::move_drop), with two key differences:
+    /// This is similar to [move_drop](crate::raindrop::Raindrop::move_drop), with one key difference:
     /// - If the `Raindrop` is not visible because it has fallen down below the bottom of the terminal,
     ///   [reinit_state](crate::raindrop::Raindrop::reinit_state) is called to re-randomize the `Raindrop` and
     ///   move it slightly above the top of the terminal.
-    ///
-    /// - If the `Raindrop` has had its `advance_chance` set to some value that is not 1.0, this function
-    ///   will only have a chance of advancing this raindrop's position. If you want to move the `Raindrop`
-    ///   for certain, use the [move_drop](crate::raindrop::Raindrop::move_drop) method
     pub fn advance_animation(&mut self, terminal_height: u16) {
         // only perform visibility check if current row is not less than 0
         // if we didn't make this check conditional, advance_animation would continuously call reinit_state
         // as raindrops always start above row 0 but are never visible until they reach row 0
-        if !(self.row_index < 0) && !self.is_visible(terminal_height) {
+        if !(self.int_row_index() < 0) && !self.is_visible(terminal_height) {
             self.reinit_state(terminal_height);
             return;
         }
 
-        if self.advance_chance == 1.0 {
-            // unconditionally move if advance_chance is 1.0, skipping an uneeded rng call
-            self.move_drop();
-        } else if self.local_rng.gen_bool(self.advance_chance) {
-            // if advance_chance is not 1.0, perform rng call to decide whether to move
-            self.move_drop();
-        }
+        self.move_drop();
     }
 }

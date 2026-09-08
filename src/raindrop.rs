@@ -1,7 +1,7 @@
 //! Raindrop structure + implementation
 
 use crossterm::style::{self, Stylize};
-use rand::{self, rngs, seq::SliceRandom, Rng};
+use rand::{self, rngs, seq::IndexedRandom, RngExt};
 
 use self::color_algorithms::ColorAlgorithm;
 
@@ -104,7 +104,7 @@ where
         let mut new_instance = Self {
             charset,
             color_algorithm,
-            local_rng: rand::thread_rng(),
+            local_rng: rand::rng(),
             follower_content: Vec::new(),
             row_index: 0.0,
             speed
@@ -142,7 +142,7 @@ where
         // first determine follower length
         let follower_length = self
             .local_rng
-            .gen_range(FOLLOWER_MIN_LENGTH..=max_follower_length);
+            .random_range(FOLLOWER_MIN_LENGTH..=max_follower_length);
 
         // create empty vector with capacity great enough to hold all follower chars
         let mut new_follower_content = Vec::with_capacity(follower_length.into());
@@ -160,7 +160,7 @@ where
 
         // generate and store new row index value
         // this can be done in a single step
-        self.row_index = self.local_rng.gen_range(START_OFFSET_RANGE);
+        self.row_index = self.local_rng.random_range(START_OFFSET_RANGE);
 
         // don't return anything
     }

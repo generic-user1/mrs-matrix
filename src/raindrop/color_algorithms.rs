@@ -1,5 +1,8 @@
 //! Algorithms that determine the color of `Raindrop` follower characters
-use std::ops::{Range, RangeInclusive};
+use std::{
+    fmt::Display,
+    ops::{Range, RangeInclusive}
+};
 
 const UNIT_INTERVAL: RangeInclusive<f32> = 0.0..=1.0;
 const DEG_INTERVAL: Range<f32> = 0.0..360.0;
@@ -13,7 +16,7 @@ use coolor::{Color, Hsl};
 /// ```
 /// use mrs_matrix::raindrop::color_algorithms::{ColorAlgorithm, LightnessDescending};
 ///
-/// let color_algorithm: ColorAlgorithm = LightnessDescending::new(118.0, 0.82).into();
+/// let color_algorithm: ColorAlgorithm = LightnessDescending::try_new(118.0, 0.82).unwrap().into();
 /// ```
 #[derive(Clone)]
 pub enum ColorAlgorithm {
@@ -77,6 +80,35 @@ impl ColorAlgorithm {
     }
 }
 
+/// Reasons creating a [ColorAlgorithm] (more specifically, one of the structs that [ColorAlgorithm] uses) may fail
+#[derive(Debug)]
+pub enum ColorAlgorithmError {
+    /// The lightness specified was out of bounds. Includes the offending lightness value
+    LightnessOutOfBounds(f32),
+
+    /// The saturation specified was out of bounds. Includes the offending saturation value
+    SaturationOutOfBounds(f32),
+
+    /// The hue specified was out of bounds. Includes the offending hue value
+    HueOutOfBounds(f32)
+}
+impl Display for ColorAlgorithmError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::HueOutOfBounds(h) => {
+                write!(f, "hue {} outside of expected bounds [0, 360)", h)
+            }
+            Self::SaturationOutOfBounds(s) => {
+                write!(f, "saturation {} outside of expected bounds [0, 1]", s)
+            }
+            Self::LightnessOutOfBounds(l) => {
+                write!(f, "lightness {} outside of expected bounds [0, 1]", l)
+            }
+        }
+    }
+}
+impl std::error::Error for ColorAlgorithmError {}
+
 /// Colors characters with varying lightness according to their distance from the leader
 #[derive(Clone)]
 pub struct LightnessDescending {
@@ -89,20 +121,14 @@ impl LightnessDescending {
     /// `hue` is the hue degree of the base color. It must be within the range `[0.0, 360.0)`.
     ///
     /// `saturation` is the saturation amount of the base color. It must be within the range `[0.0, 1.0]`.
-    ///
-    ///# Notes
-    ///
-    /// If `hue` or `saturation` are outside of their expected ranges, `new` will panic
-    pub fn new(hue: f32, saturation: f32) -> Self {
-        assert!(
-            DEG_INTERVAL.contains(&hue),
-            "hue outside of expected bounds [0, 360)"
-        );
-        assert!(
-            UNIT_INTERVAL.contains(&saturation),
-            "saturation outside of expected bounds [0, 1]"
-        );
-        Self { hue, saturation }
+    pub fn try_new(hue: f32, saturation: f32) -> Result<Self, ColorAlgorithmError> {
+        if !DEG_INTERVAL.contains(&hue) {
+            return Err(ColorAlgorithmError::HueOutOfBounds(hue));
+        }
+        if !UNIT_INTERVAL.contains(&saturation) {
+            return Err(ColorAlgorithmError::SaturationOutOfBounds(saturation));
+        }
+        Ok(Self { hue, saturation })
     }
 }
 impl From<LightnessDescending> for ColorAlgorithm {
@@ -123,20 +149,15 @@ impl SaturationDescending {
     /// `hue` is the hue degree of the base color. It must be within the range `[0, 360)`.
     ///
     /// `lightness` is the lightness amount of the base color. It must be within the range `[0.0, 1.0]`.
-    ///
-    ///# Notes
-    ///
-    /// If `hue` or `lightness` are outside of their expected ranges, `new` will panic
-    pub fn new(hue: f32, lightness: f32) -> Self {
-        assert!(
-            DEG_INTERVAL.contains(&hue),
-            "hue outside of expected bounds [0, 360)"
-        );
-        assert!(
-            UNIT_INTERVAL.contains(&lightness),
-            "lightness outside of expected bounds [0, 1]"
-        );
-        Self { hue, lightness }
+    pub fn try_new(hue: f32, lightness: f32) -> Result<Self, ColorAlgorithmError> {
+        if !DEG_INTERVAL.contains(&hue) {
+            return Err(ColorAlgorithmError::HueOutOfBounds(hue));
+        }
+        if !UNIT_INTERVAL.contains(&lightness) {
+            return Err(ColorAlgorithmError::LightnessOutOfBounds(lightness));
+        }
+
+        Ok(Self { hue, lightness })
     }
 }
 impl From<SaturationDescending> for ColorAlgorithm {
@@ -157,23 +178,18 @@ impl HueVariation {
     /// `saturation` is the saturation amount of the base color. It must be within the range `[0.0, 1.0]`.
     ///
     /// `lightness` is the lightness amount of the base color. It must be within the range `[0.0, 1.0]`.
-    ///
-    ///# Notes
-    ///  
-    /// If `hue` or `lightness` are outside of their expected ranges, `new` will panic
-    pub fn new(saturation: f32, lightness: f32) -> Self {
-        assert!(
-            UNIT_INTERVAL.contains(&saturation),
-            "saturation outside of expected bounds [0, 1]"
-        );
-        assert!(
-            UNIT_INTERVAL.contains(&lightness),
-            "lightness outside of expected bounds [0, 1]"
-        );
-        Self {
+    pub fn try_new(saturation: f32, lightness: f32) -> Result<Self, ColorAlgorithmError> {
+        if !UNIT_INTERVAL.contains(&saturation) {
+            return Err(ColorAlgorithmError::SaturationOutOfBounds(saturation));
+        }
+        if !UNIT_INTERVAL.contains(&lightness) {
+            return Err(ColorAlgorithmError::LightnessOutOfBounds(lightness));
+        }
+
+        Ok(Self {
             saturation,
             lightness
-        }
+        })
     }
 }
 impl From<HueVariation> for ColorAlgorithm {

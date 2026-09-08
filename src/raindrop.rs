@@ -119,7 +119,7 @@ impl<'a> Raindrop<'a> {
     ///
     /// let charset = vec!['a','b', 'c'];
     ///
-    /// let color_algorithm = color_algorithms::LightnessDescending::new(118.0, 0.82).into();
+    /// let color_algorithm = color_algorithms::LightnessDescending::try_new(118.0, 0.82).unwrap().into();
     ///
     /// let speed = RaindropSpeed::Random(Uniform::try_from(0.75..1.25).unwrap());
     ///

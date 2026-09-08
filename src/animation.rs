@@ -73,7 +73,7 @@ fn create_raindrops(
 /// pub fn main() -> crossterm::Result<()>
 /// {
 ///     let charset = PrintableAscii().get_charset();
-///     let color_algorithm = LightnessDescending::new(118.0, 0.82).into();
+///     let color_algorithm = LightnessDescending::try_new(118.0, 0.82).unwrap().into();
 ///     let speed = RaindropSpeed::Constant(0.75);
 ///     let target_framerate = 25;
 ///     anim_loop(&charset, color_algorithm, speed, target_framerate)

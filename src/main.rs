@@ -1,7 +1,11 @@
 use clap::{ArgEnum, ArgGroup, Parser};
 use mrs_matrix::anim_loop;
 use mrs_matrix::raindrop::charsets::Charset;
-use mrs_matrix::raindrop::{charsets, color_algorithms, RaindropSpeed};
+use mrs_matrix::raindrop::{
+    charsets,
+    color_algorithms::{HueVariation, LightnessDescending},
+    RaindropSpeed
+};
 
 #[derive(Debug, Clone, Copy, ArgEnum)]
 enum CharsetType {
@@ -69,29 +73,17 @@ fn main() -> crossterm::Result<()> {
     };
 
     let color_algorithm = match args.color_mode {
-        ColorMode::Green => color_algorithms::LightnessDescending::try_new(118.0, 1.0)
-            .unwrap()
-            .into(),
+        ColorMode::Green => LightnessDescending::try_new(118.0, 1.0).unwrap().into(),
 
-        ColorMode::Blue => color_algorithms::LightnessDescending::try_new(244.0, 1.0)
-            .unwrap()
-            .into(),
+        ColorMode::Blue => LightnessDescending::try_new(244.0, 1.0).unwrap().into(),
 
-        ColorMode::Purple => color_algorithms::LightnessDescending::try_new(302.0, 1.0)
-            .unwrap()
-            .into(),
+        ColorMode::Purple => LightnessDescending::try_new(302.0, 1.0).unwrap().into(),
 
-        ColorMode::Red => color_algorithms::LightnessDescending::try_new(0.0, 1.0)
-            .unwrap()
-            .into(),
+        ColorMode::Red => LightnessDescending::try_new(0.0, 1.0).unwrap().into(),
 
-        ColorMode::Yellow => color_algorithms::LightnessDescending::try_new(51.0, 1.0)
-            .unwrap()
-            .into(),
+        ColorMode::Yellow => LightnessDescending::try_new(51.0, 1.0).unwrap().into(),
 
-        ColorMode::Rainbow => color_algorithms::HueVariation::try_new(1.0, 0.5)
-            .unwrap()
-            .into()
+        ColorMode::Rainbow => HueVariation::try_new(1.0, 0.5).unwrap().into()
     };
     anim_loop(&charset, color_algorithm, allowed_speeds, target_framerate)
 }

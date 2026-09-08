@@ -7,6 +7,14 @@ const DEG_INTERVAL: Range<f32> = 0.0..360.0;
 use coolor::{Color, Hsl};
 
 /// Different algorithms for how to color the different characters in a [Raindrop](crate::raindrop::Raindrop)
+///
+/// The easiset way to create a `ColorAlgorithm` is to create the corresponding struct first, then use [From] or [Into] to
+/// get a `ColorAlgorithm` from that. For example:
+/// ```
+/// use mrs_matrix::raindrop::color_algorithms::{ColorAlgorithm, LightnessDescending};
+///
+/// let color_algorithm: ColorAlgorithm = LightnessDescending::new(118.0, 0.82).into();
+/// ```
 #[derive(Clone)]
 pub enum ColorAlgorithm {
     /// Colors characters with varying lightness according to their distance from the leader
@@ -17,9 +25,9 @@ pub enum ColorAlgorithm {
     HueVariation(HueVariation)
 }
 impl ColorAlgorithm {
-    ///Returns a [Color] that will be applied to a character
+    /// Returns a [Color] that will be applied to a character
     ///
-    /// Passed a `follower_proportion` within the range `[0.0, 1.0]` representing
+    /// The `follower_proportion` should be within the range `[0.0, 1.0]` and represents
     /// how far away this char is from the leader (with 1.0 being max distance)
     ///
     ///# Notes

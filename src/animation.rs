@@ -21,22 +21,19 @@ use std::time::{Duration, Instant};
 /// `terminal_width` should be the width of the terminal in columns
 ///
 /// `terminal_height` should be the height of the terminal in rows
-fn create_raindrops<T>(
+fn create_raindrops(
     charset: &[char],
-    color_algorithm: T,
+    color_algorithm: ColorAlgorithm,
     allowed_speeds: RaindropSpeed,
     terminal_width: u16,
     terminal_height: u16
-) -> Vec<Raindrop<'_, T>>
-where
-    T: ColorAlgorithm
-{
-    let mut raindrop_vec: Vec<Raindrop<T>> = Vec::with_capacity(terminal_width.into());
+) -> Vec<Raindrop<'_>> {
+    let mut raindrop_vec: Vec<Raindrop> = Vec::with_capacity(terminal_width.into());
 
     for _ in 0..terminal_width {
         let new_raindrop = Raindrop::new(
             charset,
-            color_algorithm,
+            color_algorithm.clone(),
             allowed_speeds.clone(),
             terminal_height
         );
@@ -76,24 +73,18 @@ where
 /// pub fn main() -> crossterm::Result<()>
 /// {
 ///     let charset = PrintableAscii().get_charset();
-///     let color_algorithm = LightnessDescending{
-///         hue: 118.0,
-///         saturation: 0.82
-///     };
+///     let color_algorithm = LightnessDescending::new(118.0, 0.82).into();
 ///     let speed = RaindropSpeed::Constant(0.75);
 ///     let target_framerate = 25;
 ///     anim_loop(&charset, color_algorithm, speed, target_framerate)
 /// }
 /// ```
-pub fn anim_loop<T>(
+pub fn anim_loop(
     charset: &[char],
-    color_algorithm: T,
+    color_algorithm: ColorAlgorithm,
     allowed_speeds: RaindropSpeed,
     target_framerate: usize
-) -> crossterm::Result<()>
-where
-    T: ColorAlgorithm
-{
+) -> crossterm::Result<()> {
     assert!(
         !charset.is_empty(),
         "cannot run anim_loop with empty character set"
@@ -119,7 +110,7 @@ where
 
     let mut raindrop_vector = create_raindrops(
         charset,
-        color_algorithm,
+        color_algorithm.clone(),
         allowed_speeds.clone(),
         term_cols,
         term_rows
@@ -166,7 +157,7 @@ where
 
                     raindrop_vector = create_raindrops(
                         charset,
-                        color_algorithm,
+                        color_algorithm.clone(),
                         allowed_speeds.clone(),
                         term_cols,
                         term_rows

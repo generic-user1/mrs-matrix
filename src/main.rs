@@ -68,59 +68,20 @@ fn main() -> crossterm::Result<()> {
         }
     };
 
-    //we need a seperate call to anim_loop for each possible type of ColorAlgorithm
-    //to avoid this, we would need to use a trait object (like Box<dyn ColorAlgorithm>),
-    //but that would incur a runtime penalty that we could like to avoid
+    let color_algorithm = match args.color_mode {
+        ColorMode::Green => color_algorithms::LightnessDescending::new(118.0, 1.0).into(),
 
-    match args.color_mode {
-        ColorMode::Green => {
-            let color_algorithm = color_algorithms::LightnessDescending {
-                hue: 118.0,
-                saturation: 1.0
-            };
-            anim_loop(&charset, color_algorithm, allowed_speeds, target_framerate)
-        }
+        ColorMode::Blue => color_algorithms::LightnessDescending::new(244.0, 1.0).into(),
 
-        ColorMode::Blue => {
-            let color_algorithm = color_algorithms::LightnessDescending {
-                hue: 244.0,
-                saturation: 1.0
-            };
-            anim_loop(&charset, color_algorithm, allowed_speeds, target_framerate)
-        }
+        ColorMode::Purple => color_algorithms::LightnessDescending::new(302.0, 1.0).into(),
 
-        ColorMode::Purple => {
-            let color_algorithm = color_algorithms::LightnessDescending {
-                hue: 302.0,
-                saturation: 1.0
-            };
-            anim_loop(&charset, color_algorithm, allowed_speeds, target_framerate)
-        }
+        ColorMode::Red => color_algorithms::LightnessDescending::new(0.0, 1.0).into(),
 
-        ColorMode::Red => {
-            let color_algorithm = color_algorithms::LightnessDescending {
-                hue: 0.0,
-                saturation: 1.0
-            };
-            anim_loop(&charset, color_algorithm, allowed_speeds, target_framerate)
-        }
+        ColorMode::Yellow => color_algorithms::LightnessDescending::new(51.0, 1.0).into(),
 
-        ColorMode::Yellow => {
-            let color_algorithm = color_algorithms::LightnessDescending {
-                hue: 51.0,
-                saturation: 1.0
-            };
-            anim_loop(&charset, color_algorithm, allowed_speeds, target_framerate)
-        }
-
-        ColorMode::Rainbow => {
-            let color_algorithm = color_algorithms::HueVariation {
-                saturation: 1.0,
-                lightness: 0.5
-            };
-            anim_loop(&charset, color_algorithm, allowed_speeds, target_framerate)
-        }
-    }
+        ColorMode::Rainbow => color_algorithms::HueVariation::new(1.0, 0.5).into()
+    };
+    anim_loop(&charset, color_algorithm, allowed_speeds, target_framerate)
 }
 
 /// framerate parser/validator function

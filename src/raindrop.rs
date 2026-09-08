@@ -59,10 +59,7 @@ impl RaindropSpeed {
 /// The leader is a continuously (per frame) randomized single character at the bottom of the raindrop.
 /// The follower is a string of characters that follow the leader. They have randomized length and content,
 /// but unlike leaders, are randomized only once (at instantiation) rather than continuously (per frame)
-pub struct Raindrop<'a, T>
-where
-    T: ColorAlgorithm
-{
+pub struct Raindrop<'a> {
     // follower_content is ordered such that index 0 represents
     // the first char above the leader, index 1 represents the second, and so on
     // note that Vec<char> is used instead of String; this is because we care about
@@ -85,17 +82,14 @@ where
     // what speeds this raindrop is allowed to have
     allowed_speeds: RaindropSpeed,
 
-    // ColorAlgorithm implementor that is used to color follower chars
-    color_algorithm: T,
+    // ColorAlgorithm that is used to color follower chars
+    color_algorithm: ColorAlgorithm,
 
     // locally cached random number generator
     local_rng: rngs::ThreadRng
 }
 
-impl<'a, T> Raindrop<'a, T>
-where
-    T: ColorAlgorithm
-{
+impl<'a> Raindrop<'a> {
     /// Returns a (pseudo)randomly generated character from the internal charset
     pub fn gen_char(&mut self) -> char {
         *(self.charset.choose(&mut self.local_rng).unwrap())
@@ -105,9 +99,8 @@ where
     ///
     /// `charset` should be a reference to Vector of chars.
     ///
-    /// `color_algorithm` should implement
-    /// [ColorAlgorithm](crate::raindrop::color_algorithms::ColorAlgorithm). It defines
-    /// how follower characters will be colored.
+    /// `color_algorithm` should be a [ColorAlgorithm].
+    /// It defines how follower characters will be colored.
     ///
     /// `allowed_speeds` defines what speeds the `Raindrop` is allowed to have.
     /// The speed of a raindrop is how fast it moves down the screen, measured in rows per frame.
@@ -126,10 +119,7 @@ where
     ///
     /// let charset = vec!['a','b', 'c'];
     ///
-    /// let color_algorithm = color_algorithms::LightnessDescending{
-    ///     hue: 118.0,
-    ///     saturation: 0.82
-    /// };
+    /// let color_algorithm = color_algorithms::LightnessDescending::new(118.0, 0.82).into();
     ///
     /// let speed = RaindropSpeed::Random(Uniform::try_from(0.75..1.25).unwrap());
     ///
@@ -140,7 +130,7 @@ where
     /// ```
     pub fn new(
         charset: &'a [char],
-        color_algorithm: T,
+        color_algorithm: ColorAlgorithm,
         speed: RaindropSpeed,
         terminal_height: u16
     ) -> Self {
@@ -226,10 +216,8 @@ where
     ///
     /// # Notes
     ///
-    /// This function returns an [Option](Option). When requesting a char for a
-    /// row that this instance has no char for (for example, because this raindrop
-    /// is above the provided row), `None` will be returned.
-    /// If this instance does have a char for the provided row, `Some(char)` is returned.
+    /// This function returns `None` when this raindrop has no char for the given row
+    /// (because, for example, this raindrop is above the provided row).
     pub fn get_char_at_row(&mut self, row_index: u16) -> Option<char> {
         // cast provided row index to i32 and bind to a more clear name
         // we only want to accept valid u16 values, but want the value to be an i32 for

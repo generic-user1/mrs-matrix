@@ -1,7 +1,13 @@
 //! Raindrop structure + implementation
 
 use crossterm::style::{self, Stylize};
-use rand::{self, rngs, seq::IndexedRandom, RngExt};
+use rand::{
+    self,
+    distr::{uniform::Uniform, Distribution},
+    rngs,
+    seq::IndexedRandom,
+    Rng, RngExt
+};
 
 use self::color_algorithms::ColorAlgorithm;
 
@@ -17,6 +23,35 @@ const FOLLOWER_MAX_LENGTH_OFFSET: u16 = 4;
 // rows will start with a position offset from 0 by a value
 // that is (pseudo)randomly selected from this range
 const START_OFFSET_RANGE: std::ops::RangeInclusive<f64> = -64.0..=-1.0;
+
+/// A [Raindrop]'s speed
+///
+/// Raindrops have some speed, measured in rows per frame. For example, a speed of 1.0 means the
+/// raindrop will advance by 1 row each frame, a speed of 2.0 means the raindrop will advance by 2 rows each frame,
+/// and a speed of 0.5 means the raindrop will advance by half a row each frame - i.e. it will advance one row every 2 frames.
+///
+/// A raindrop always has a constant speed while on-screen, but its speed is allowed to change after it has dropped off the bottom
+/// of the screen and has yet to drop in from the top of the screen.
+#[derive(Debug, Clone)]
+pub enum RaindropSpeed {
+    /// Use a constant speed
+    Constant(f64),
+
+    /// Define a range of speeds the [Raindrop] is allowed to have
+    /// One specific speed will be chosen at random when the [Raindrop]
+    /// begins to fall, and a new speed will be chosen when it reaches the end of the screen
+    /// and begins to fall again
+    Random(Uniform<f64>)
+}
+
+impl RaindropSpeed {
+    fn get_speed<T: Rng>(&self, rng: &mut T) -> f64 {
+        match self {
+            Self::Constant(v) => *v,
+            Self::Random(range) => range.sample(rng)
+        }
+    }
+}
 
 /// A `Raindrop` describes a single 'falling stream' of randomized characters
 ///
@@ -45,7 +80,10 @@ where
     charset: &'a [char],
 
     // speed, in rows, that this raindrop will advance per frame
-    speed: f64,
+    current_speed: f64,
+
+    // what speeds this raindrop is allowed to have
+    allowed_speeds: RaindropSpeed,
 
     // ColorAlgorithm implementor that is used to color follower chars
     color_algorithm: T,
@@ -71,16 +109,20 @@ where
     /// [ColorAlgorithm](crate::raindrop::color_algorithms::ColorAlgorithm). It defines
     /// how follower characters will be colored.
     ///
-    /// `speed` is the distance that this `Raindrop` will advance by each frame, measured in rows.
-    /// A speed of 1.0 means the `Raindrop` will advance by one row per frame, a speed of 2.0 means it will advance
-    /// two rows per frame, a speed of 0.5 means the `Raindrop` will advance by one row every two frames, etc.
+    /// `allowed_speeds` defines what speeds the `Raindrop` is allowed to have.
+    /// The speed of a raindrop is how fast it moves down the screen, measured in rows per frame.
+    /// See [RaindropSpeed] for details.
     ///
     /// `terminal_height` should be the current height of the terminal, in rows.
     ///
     ///# Examples
     /// ```
-    /// use mrs_matrix::raindrop::{Raindrop, color_algorithms};
+    /// use mrs_matrix::raindrop::{Raindrop, RaindropSpeed, color_algorithms};
     /// use crossterm::terminal;
+    ///
+    /// // this is only necessary because we want to use RaindropSpeed::Random;
+    /// // if we used RaindropSpeed:Constant, we wouldn't need to use it.
+    /// use rand::distr::uniform::Uniform;
     ///
     /// let charset = vec!['a','b', 'c'];
     ///
@@ -89,25 +131,30 @@ where
     ///     saturation: 0.82
     /// };
     ///
-    /// let speed = 0.75;
+    /// let speed = RaindropSpeed::Random(Uniform::try_from(0.75..1.25).unwrap());
     ///
     /// let term_height = terminal::size().unwrap().1;
     ///
     /// let new_raindrop_instance = Raindrop::new(&charset, color_algorithm, speed, term_height);
     /// // do something with instance
     /// ```
-    pub fn new(charset: &'a [char], color_algorithm: T, speed: f64, terminal_height: u16) -> Self {
+    pub fn new(
+        charset: &'a [char],
+        color_algorithm: T,
+        speed: RaindropSpeed,
+        terminal_height: u16
+    ) -> Self {
         // create a new `Raindrop` instance
-        // use an empty vector for follower content and a zero for row index;
-        // these will be overwritten by the call to reinit_state; in fact they could safely be null
-        // if rust had a null type
+        // use an empty vector for follower content, a zero for row index, and a zero for speed;
+        // these will be overwritten by the call to reinit_state
         let mut new_instance = Self {
             charset,
             color_algorithm,
             local_rng: rand::rng(),
             follower_content: Vec::new(),
             row_index: 0.0,
-            speed
+            current_speed: 0.0,
+            allowed_speeds: speed
         };
 
         // do the work of initializing the state of the raindrop;
@@ -121,8 +168,9 @@ where
     /// Re-initializes the state of the `Raindrop` instance
     ///
     /// Uses an internally cached random number generator to generate
-    /// pseudorandom follower chars and sets the row index to a pseudorandom value
-    /// less than (visually 'above') row 0.
+    /// pseudorandom follower chars, sets the row index to a pseudorandom value
+    /// less than (visually 'above') row 0, and (if the [RaindropSpeed] calls for it)
+    /// pseudorandomly determines the new speed of the raindrop.
     ///
     /// `terminal_height` should be the current height of the terminal, in rows
     ///
@@ -161,6 +209,9 @@ where
         // generate and store new row index value
         // this can be done in a single step
         self.row_index = self.local_rng.random_range(START_OFFSET_RANGE);
+
+        // update our speed
+        self.current_speed = self.allowed_speeds.get_speed(&mut self.local_rng);
 
         // don't return anything
     }
@@ -260,7 +311,7 @@ where
     ///
     /// To reset to the top, use [reinit_state](crate::raindrop::Raindrop::reinit_state).
     pub fn move_drop(&mut self) {
-        self.row_index += self.speed
+        self.row_index += self.current_speed
     }
 
     /// Returns `true` if Raindrop displays any chars on a terminal of height `terminal_height`; `false` otherwise
@@ -278,10 +329,10 @@ where
     ///
     /// `terminal_height` should be the current height of the terminal, in rows.
     ///
-    /// This is similar to [move_drop](crate::raindrop::Raindrop::move_drop), with one key difference:
-    /// - If the `Raindrop` is not visible because it has fallen down below the bottom of the terminal,
-    ///   [reinit_state](crate::raindrop::Raindrop::reinit_state) is called to re-randomize the `Raindrop` and
-    ///   move it slightly above the top of the terminal.
+    /// This is similar to [move_drop](crate::raindrop::Raindrop::move_drop), with one key difference
+    /// if the `Raindrop` is not visible because it has fallen down below the bottom of the terminal,
+    /// [reinit_state](crate::raindrop::Raindrop::reinit_state) is called to re-randomize the `Raindrop` and
+    /// move it slightly above the top of the terminal.
     pub fn advance_animation(&mut self, terminal_height: u16) {
         // only perform visibility check if current row is not less than 0
         // if we didn't make this check conditional, advance_animation would continuously call reinit_state

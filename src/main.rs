@@ -1,7 +1,7 @@
 use clap::{ArgEnum, ArgGroup, Parser};
 use mrs_matrix::anim_loop;
 use mrs_matrix::raindrop::charsets::Charset;
-use mrs_matrix::raindrop::{charsets, color_algorithms};
+use mrs_matrix::raindrop::{charsets, color_algorithms, RaindropSpeed};
 
 #[derive(Debug, Clone, Copy, ArgEnum)]
 enum CharsetType {
@@ -51,7 +51,11 @@ struct Args {
 fn main() -> crossterm::Result<()> {
     let args = Args::parse();
 
-    let speed = if args.sync_scrolling { 1.0 } else { 0.75 };
+    let allowed_speeds = if args.sync_scrolling {
+        RaindropSpeed::Constant(1.0)
+    } else {
+        RaindropSpeed::Random((0.25..=1.25).try_into().unwrap())
+    };
     let target_framerate = args.framerate;
 
     let charset = if let Some(charset) = args.custom_charset {
@@ -74,7 +78,7 @@ fn main() -> crossterm::Result<()> {
                 hue: 118.0,
                 saturation: 1.0
             };
-            anim_loop(&charset, color_algorithm, speed, target_framerate)
+            anim_loop(&charset, color_algorithm, allowed_speeds, target_framerate)
         }
 
         ColorMode::Blue => {
@@ -82,7 +86,7 @@ fn main() -> crossterm::Result<()> {
                 hue: 244.0,
                 saturation: 1.0
             };
-            anim_loop(&charset, color_algorithm, speed, target_framerate)
+            anim_loop(&charset, color_algorithm, allowed_speeds, target_framerate)
         }
 
         ColorMode::Purple => {
@@ -90,7 +94,7 @@ fn main() -> crossterm::Result<()> {
                 hue: 302.0,
                 saturation: 1.0
             };
-            anim_loop(&charset, color_algorithm, speed, target_framerate)
+            anim_loop(&charset, color_algorithm, allowed_speeds, target_framerate)
         }
 
         ColorMode::Red => {
@@ -98,7 +102,7 @@ fn main() -> crossterm::Result<()> {
                 hue: 0.0,
                 saturation: 1.0
             };
-            anim_loop(&charset, color_algorithm, speed, target_framerate)
+            anim_loop(&charset, color_algorithm, allowed_speeds, target_framerate)
         }
 
         ColorMode::Yellow => {
@@ -106,7 +110,7 @@ fn main() -> crossterm::Result<()> {
                 hue: 51.0,
                 saturation: 1.0
             };
-            anim_loop(&charset, color_algorithm, speed, target_framerate)
+            anim_loop(&charset, color_algorithm, allowed_speeds, target_framerate)
         }
 
         ColorMode::Rainbow => {
@@ -114,7 +118,7 @@ fn main() -> crossterm::Result<()> {
                 saturation: 1.0,
                 lightness: 0.5
             };
-            anim_loop(&charset, color_algorithm, speed, target_framerate)
+            anim_loop(&charset, color_algorithm, allowed_speeds, target_framerate)
         }
     }
 }

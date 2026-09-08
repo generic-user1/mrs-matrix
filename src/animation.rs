@@ -1,12 +1,13 @@
 //! Functions relating directly to drawing animations on the screen
 //!
-use crate::raindrop::{color_algorithms::ColorAlgorithm, Raindrop};
+use crate::raindrop::{color_algorithms::ColorAlgorithm, Raindrop, RaindropSpeed};
 use crossterm::{
     self, cursor,
     event::{self, Event},
     style::{Print, PrintStyledContent},
     terminal, QueueableCommand
 };
+
 use std::io::{stdout, Write};
 use std::time::{Duration, Instant};
 
@@ -15,17 +16,15 @@ use std::time::{Duration, Instant};
 /// `charset` should be a reference to a Vector of chars. This will be the set of
 /// characters that the raindrops will be generated from.
 ///
-/// `speed` is the distance (in rows) that a `Raindrop` will advance on any given frame.
+/// `allowed_speeds` defines what speeds each `Raindrop` is allowed to have.
 ///
 /// `terminal_width` should be the width of the terminal in columns
 ///
 /// `terminal_height` should be the height of the terminal in rows
-///
-/// Note that this function is intentionally private because it's unlikely to be generally useful
 fn create_raindrops<T>(
     charset: &[char],
     color_algorithm: T,
-    speed: f64,
+    allowed_speeds: RaindropSpeed,
     terminal_width: u16,
     terminal_height: u16
 ) -> Vec<Raindrop<'_, T>>
@@ -35,7 +34,12 @@ where
     let mut raindrop_vec: Vec<Raindrop<T>> = Vec::with_capacity(terminal_width.into());
 
     for _ in 0..terminal_width {
-        let new_raindrop = Raindrop::new(charset, color_algorithm, speed, terminal_height);
+        let new_raindrop = Raindrop::new(
+            charset,
+            color_algorithm,
+            allowed_speeds.clone(),
+            terminal_height
+        );
         raindrop_vec.push(new_raindrop);
     }
 
@@ -52,7 +56,7 @@ where
 /// `color_algorithm` should be an instance of a type implementing [ColorAlgorithm], such as
 /// [LightnessDescending](crate::raindrop::color_algorithms::LightnessDescending).
 ///
-/// `speed` is the distance that a `Raindrop` will advance by on any given frame, measured in rows.
+/// `allowed_speeds` defines what speeds each [Raindrop] is allowed to have (see [RaindropSpeed]).
 ///
 /// `target_framerate` should be the number of frames per second to target.
 ///
@@ -67,6 +71,7 @@ where
 /// use mrs_matrix::animation::anim_loop;
 /// use mrs_matrix::raindrop::charsets::{Charset, PrintableAscii};
 /// use mrs_matrix::raindrop::color_algorithms::LightnessDescending;
+/// use mrs_matrix::raindrop::RaindropSpeed;
 ///
 /// pub fn main() -> crossterm::Result<()>
 /// {
@@ -75,17 +80,20 @@ where
 ///         hue: 118.0,
 ///         saturation: 0.82
 ///     };
-///     let speed = 0.75;
+///     let speed = RaindropSpeed::Constant(0.75);
 ///     let target_framerate = 25;
-///     anim_loop(charset, color_algorithm, speed, target_framerate)
+///     anim_loop(&charset, color_algorithm, speed, target_framerate)
 /// }
 /// ```
-pub fn anim_loop<T: ColorAlgorithm>(
+pub fn anim_loop<T>(
     charset: &[char],
     color_algorithm: T,
-    speed: f64,
+    allowed_speeds: RaindropSpeed,
     target_framerate: usize
-) -> crossterm::Result<()> {
+) -> crossterm::Result<()>
+where
+    T: ColorAlgorithm
+{
     assert!(
         !charset.is_empty(),
         "cannot run anim_loop with empty character set"
@@ -109,8 +117,13 @@ pub fn anim_loop<T: ColorAlgorithm>(
     //calculate target frame duration by dividing one second by the number of frames that should be in one second
     let target_frame_duration = Duration::from_secs_f64(1.0 / (target_framerate as f64));
 
-    let mut raindrop_vector =
-        create_raindrops(charset, color_algorithm, speed, term_cols, term_rows);
+    let mut raindrop_vector = create_raindrops(
+        charset,
+        color_algorithm,
+        allowed_speeds.clone(),
+        term_cols,
+        term_rows
+    );
 
     let mut start_instant: Instant;
     loop {
@@ -151,8 +164,13 @@ pub fn anim_loop<T: ColorAlgorithm>(
                     term_cols = new_cols;
                     term_rows = new_rows;
 
-                    raindrop_vector =
-                        create_raindrops(charset, color_algorithm, speed, term_cols, term_rows);
+                    raindrop_vector = create_raindrops(
+                        charset,
+                        color_algorithm,
+                        allowed_speeds.clone(),
+                        term_cols,
+                        term_rows
+                    );
                 }
                 //stop loop upon recieving a mouse or key event
                 _ => break

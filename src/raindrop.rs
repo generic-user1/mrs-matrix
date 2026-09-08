@@ -97,7 +97,7 @@ impl<'a> Raindrop<'a> {
 
     /// Returns a new `Raindrop` instance
     ///
-    /// `charset` should be a reference to Vector of chars.
+    /// `charset` specifies what chars the `Raindrop` may use.
     ///
     /// `color_algorithm` should be a [ColorAlgorithm].
     /// It defines how follower characters will be colored.
@@ -114,7 +114,7 @@ impl<'a> Raindrop<'a> {
     /// use crossterm::terminal;
     ///
     /// // this is only necessary because we want to use RaindropSpeed::Random;
-    /// // if we used RaindropSpeed:Constant, we wouldn't need to use it.
+    /// // if we used RaindropSpeed::Constant, we wouldn't need to use it.
     /// use rand::distr::uniform::Uniform;
     ///
     /// let charset = vec!['a','b', 'c'];

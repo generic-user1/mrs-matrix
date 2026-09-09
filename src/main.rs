@@ -1,3 +1,5 @@
+use std::ops::RangeInclusive;
+
 use clap::{error::ErrorKind, ArgGroup, CommandFactory, Parser, ValueEnum};
 use mrs_matrix::anim_loop;
 
@@ -46,8 +48,8 @@ struct MainArgs {
     charset: CharsetType,
 
     /// Single speed in rows per frame
-    #[arg(short, long, default_value_t = 1.0)]
-    speed: f64,
+    #[arg(short, long)]
+    speed: Option<f64>,
 
     /// Minimum possible speed in rows per frame
     #[arg(short = 'i', long, requires = "max_speed")]
@@ -72,10 +74,12 @@ struct MainArgs {
 /// The entire program bails out if the resulting range is empty (similar to how [Parser::parse] does), because from the user's perspective,
 /// we want an empty range to look similar to missing min_speed or max_speed, or otherwise passing an invalid combination of arguments
 fn to_raindrop_speed(
-    single_speed: f64,
+    single_speed: Option<f64>,
     min_speed: Option<f64>,
     max_speed: Option<f64>
 ) -> RaindropSpeed {
+    const DEFAULT_RANGE: RangeInclusive<f64> = 0.25..=1.0;
+
     match (single_speed, min_speed, max_speed) {
         (_, Some(min_speed), Some(max_speed)) => {
             let range = min_speed..=max_speed;
@@ -90,7 +94,12 @@ fn to_raindrop_speed(
                     .exit()
             }
         }
-        (speed, _, _) => RaindropSpeed::Constant(speed)
+        (Some(speed), _, _) => RaindropSpeed::Constant(speed),
+        (None, None, None) => RaindropSpeed::Random(DEFAULT_RANGE.try_into().unwrap()),
+        _ => {
+            //in theory we should never see any other combination of Some and None because clap would've already bailed out
+            panic!("invalid combination of arguments")
+        }
     }
 }
 

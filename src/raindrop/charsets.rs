@@ -7,6 +7,12 @@ pub trait Charset {
     fn get_charset(&self) -> Vec<char>;
 }
 
+impl Charset for String {
+    fn get_charset(&self) -> Vec<char> {
+        self.chars().collect()
+    }
+}
+
 /// ASCII letter and number characters
 pub struct Alphanumeric();
 impl Charset for Alphanumeric {

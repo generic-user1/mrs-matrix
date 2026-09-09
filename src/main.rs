@@ -96,7 +96,7 @@ fn to_raindrop_speed(
 /// Handle transforming the charset-related arguments into a concrete Vec<char>
 fn to_charset(custom_charset: Option<String>, charset_type: CharsetType) -> Vec<char> {
     match (custom_charset, charset_type) {
-        (Some(charset), _) => charset.chars().collect(),
+        (Some(charset), _) => charset.get_charset(),
         (_, CharsetType::Alphanumeric) => charsets::Alphanumeric().get_charset(),
         (_, CharsetType::PrintableAscii) => charsets::PrintableAscii().get_charset(),
         (_, CharsetType::AsciiAndSymbols) => charsets::AsciiAndSymbols().get_charset()

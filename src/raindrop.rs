@@ -93,14 +93,9 @@ pub struct Raindrop<'a> {
 }
 
 impl<'a> Raindrop<'a> {
-    /// Returns a (pseudo)randomly generated character from the internal charset
-    pub fn gen_char(&mut self) -> char {
-        *(self.charset.choose(&mut self.local_rng).unwrap())
-    }
-
     /// Returns a new `Raindrop` instance
     ///
-    /// `charset` specifies what chars the `Raindrop` may use.
+    /// `charset` specifies what chars the `Raindrop` may use, and must not be empty.
     ///
     /// `color_algorithm` should be a [ColorAlgorithm].
     /// It defines how follower characters will be colored.
@@ -137,25 +132,71 @@ impl<'a> Raindrop<'a> {
         speed: RaindropSpeed,
         terminal_height: u16
     ) -> Self {
-        // create a new `Raindrop` instance
-        // use an empty vector for follower content, a zero for row index, and a zero for speed;
-        // these will be overwritten by the call to reinit_state
-        let mut new_instance = Self {
+        assert!(
+            !charset.is_empty(),
+            "tried to create Raindrop with empty charset"
+        );
+
+        // set up attributes that need setting up, pack them into a new instance, and return it
+        let mut local_rng = rand::rng();
+        let follower_content = Self::gen_follower_content(&mut local_rng, charset, terminal_height);
+        let row_index = Self::calc_initial_row(&mut local_rng, true);
+        let current_speed = speed.get_speed(&mut local_rng);
+
+        Self {
             charset,
             color_algorithm,
             local_rng: rand::rng(),
-            follower_content: Vec::new(),
-            row_index: 0.0,
-            current_speed: 0.0,
+            follower_content,
+            row_index,
+            current_speed,
             allowed_speeds: speed
-        };
+        }
+    }
 
-        // do the work of initializing the state of the raindrop;
-        // setting its follower_content and row_index pseudorandomly
-        new_instance.reinit_state(terminal_height);
+    /// Generate a single character from the provided charset
+    ///
+    /// Charset must not be empty
+    fn gen_char<T: RngExt>(rng: &mut T, charset: &'a [char]) -> char {
+        *(charset.choose(rng).unwrap())
+    }
 
-        // return the newly created and initialized instance
-        new_instance
+    /// Generate a vec of characters from the provided charset that is of appropriate size
+    ///
+    /// Charset must not be empty
+    fn gen_follower_content<T: RngExt>(
+        rng: &mut T,
+        charset: &'a [char],
+        terminal_height: u16
+    ) -> Vec<char> {
+        // determine max follower length by subtracting offset from current terminal height
+        let max_follower_length = terminal_height
+            .saturating_sub(FOLLOWER_MAX_LENGTH_OFFSET)
+            // ensure max follower length is at least FOLLOWER_MIN_LENGTH + 1
+            .max(FOLLOWER_MIN_LENGTH + 1);
+
+        // determine actual follower length
+        let follower_length = rng.random_range(FOLLOWER_MIN_LENGTH..=max_follower_length);
+
+        // create that many follower chars
+        let mut out = Vec::with_capacity(follower_length.into());
+        for _ in 0..follower_length {
+            out.push(Self::gen_char(rng, charset));
+        }
+        out
+    }
+
+    /// Pseudorandomly determine what row index this `Raindrop` should start at
+    ///
+    /// If `int_only` is true, will truncate row index to an integer. If false, return value
+    /// may or may not have a fractional component.
+    fn calc_initial_row<T: RngExt>(rng: &mut T, int_only: bool) -> f64 {
+        let out = rng.random_range(START_OFFSET_RANGE);
+        if int_only {
+            out.trunc()
+        } else {
+            out
+        }
     }
 
     /// Re-initializes the state of the `Raindrop` instance
@@ -173,46 +214,18 @@ impl<'a> Raindrop<'a> {
     /// to set the initial state. Calling this function manually is similar to creating
     /// a new `Raindrop` instance outright, but avoids the need to create a new [Rng].
     pub fn reinit_state(&mut self, terminal_height: u16) {
-        // determine max follower length by subtracting offset from current terminal height
-        let max_follower_length = terminal_height
-            .saturating_sub(FOLLOWER_MAX_LENGTH_OFFSET)
-            // ensure max follower length is at least FOLLOWER_MIN_LENGTH + 1
-            .max(FOLLOWER_MIN_LENGTH + 1);
+        //update the follower
+        self.follower_content =
+            Self::gen_follower_content(&mut self.local_rng, self.charset, terminal_height);
 
-        // use rng to generate follower_content and row_index
-        // first determine follower length
-        let follower_length = self
-            .local_rng
-            .random_range(FOLLOWER_MIN_LENGTH..=max_follower_length);
-
-        // create empty vector with capacity great enough to hold all follower chars
-        let mut new_follower_content = Vec::with_capacity(follower_length.into());
-
-        // generate follower_length chars and place them in new_follower_content vec
-        for _ in 0..follower_length {
-            new_follower_content.push(self.gen_char());
-        }
-
-        // store new follower content
-        // this needs to be done seperately from using self.gen_char
-        // to satisfy the borrow checker (as both self.follower_length.push
-        // and self.gen_char mutably borrow self)
-        self.follower_content = new_follower_content;
-
-        // generate and store new row index value
-        // this can be done in a single step
-        self.row_index = self.local_rng.random_range(START_OFFSET_RANGE);
-
-        // if our speed is constant, truncate our row index - this is so that in cases where all Raindrops
+        // update the row index
+        // if our speed is constant, our new row index must be an integer - this is so that in cases where all Raindrops
         // have the same constant speed, they all advance on the same frame as each other.
-        if self.allowed_speeds.is_constant() {
-            self.row_index = self.row_index.trunc();
-        }
+        let int_only = self.allowed_speeds.is_constant();
+        self.row_index = Self::calc_initial_row(&mut self.local_rng, int_only);
 
-        // update our speed
+        // update the speed; note that if our speed is RaindropSpeed::Constant, this will return the same value every time.
         self.current_speed = self.allowed_speeds.get_speed(&mut self.local_rng);
-
-        // don't return anything
     }
 
     /// Get the integer portion of this `Raindrop`'s row index
@@ -243,7 +256,7 @@ impl<'a> Raindrop<'a> {
         // return a randomly selected char if provided row index points to the leader of this Raindrop
         // (i.e. if the provided row index and current row index match exactly)
         if our_row_index == provided_row_index {
-            return Some(self.gen_char());
+            return Some(Self::gen_char(&mut self.local_rng, self.charset));
         }
 
         // we already checked if provided row index was greater than row index

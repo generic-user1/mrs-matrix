@@ -1,4 +1,4 @@
-use clap::{ArgGroup, Parser, ValueEnum};
+use clap::{error::ErrorKind, ArgGroup, CommandFactory, Parser, ValueEnum};
 use mrs_matrix::anim_loop;
 use mrs_matrix::raindrop::charsets::Charset;
 use mrs_matrix::raindrop::{
@@ -25,11 +25,16 @@ enum ColorMode {
 }
 
 #[derive(Debug, Parser)]
-#[clap(version, about, long_about = None)]
-#[clap(group(
+#[command(version, about, long_about = None)]
+#[command(group(
     ArgGroup::new("charsetgroup")
-    .args(&["charset", "custom_charset"]),
+    .args(&["charset", "custom_charset"])
 ))]
+//These two groups "speedmin" and "speedmax" are to enforce that speed can't be used with min_speed or max_speed,
+//but min_speed and max_speed can (and in fact must) be used with each other.
+//It feels like there ought to be a better way to express this.
+#[command(group(ArgGroup::new("speedmin").args(&["speed", "min_speed"])))]
+#[command(group(ArgGroup::new("speedmax").args(&["speed", "max_speed"])))]
 struct MainArgs {
     /// Defines how characters will be colored.
     #[arg(short, long, value_enum, default_value_t = ColorMode::Green)]
@@ -39,9 +44,17 @@ struct MainArgs {
     #[arg(long, value_enum, default_value_t = CharsetType::AsciiAndSymbols)]
     charset: CharsetType,
 
-    /// Run in synchronized scrolling mode
-    #[arg(short, long)]
-    sync_scrolling: bool,
+    /// Single speed in rows per frame
+    #[arg(short, long, default_value_t = 1.0)]
+    speed: f64,
+
+    /// Minimum possible speed in rows per frame
+    #[arg(short = 'i', long, requires = "max_speed")]
+    min_speed: Option<f64>,
+
+    /// Maximum possible speed in rows per frame
+    #[arg(short = 'a', long, requires = "min_speed")]
+    max_speed: Option<f64>,
 
     /// Sets the target framerate
     #[arg(short, long, value_parser=framerate_in_range, default_value_t = 25)]
@@ -52,14 +65,38 @@ struct MainArgs {
     custom_charset: Option<String>
 }
 
+/// Handle transforming the speed-related arguments into a concrete RaindropSpeed
+///
+/// As part of this work, validate that if min_speed and max_speed are used, the resulting range isn't empty.
+/// The entire program bails out if the resulting range is empty (similar to how [Parser::parse] does), because from the user's perspective,
+/// we want an empty range to look similar to missing min_speed or max_speed, or otherwise passing an invalid combination of arguments
+fn to_raindrop_speed(
+    single_speed: f64,
+    min_speed: Option<f64>,
+    max_speed: Option<f64>
+) -> RaindropSpeed {
+    match (single_speed, min_speed, max_speed) {
+        (_, Some(min_speed), Some(max_speed)) => {
+            let range = min_speed..=max_speed;
+            if let Ok(range) = range.try_into() {
+                RaindropSpeed::Random(range)
+            } else {
+                MainArgs::command()
+                    .error(
+                        ErrorKind::ValueValidation,
+                        "value for --max-speed was less than value for --min-speed"
+                    )
+                    .exit()
+            }
+        }
+        (speed, _, _) => RaindropSpeed::Constant(speed)
+    }
+}
+
 fn main() -> crossterm::Result<()> {
     let args = MainArgs::parse();
 
-    let allowed_speeds = if args.sync_scrolling {
-        RaindropSpeed::Constant(1.0)
-    } else {
-        RaindropSpeed::Random((0.25..=1.25).try_into().unwrap())
-    };
+    let allowed_speeds = to_raindrop_speed(args.speed, args.min_speed, args.max_speed);
     let target_framerate = args.framerate;
 
     let charset = if let Some(charset) = args.custom_charset {

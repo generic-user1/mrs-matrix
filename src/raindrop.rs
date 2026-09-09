@@ -51,9 +51,6 @@ impl RaindropSpeed {
             Self::Random(range) => range.sample(rng)
         }
     }
-    const fn is_constant(&self) -> bool {
-        matches!(self, Self::Constant(_))
-    }
 }
 
 /// A `Raindrop` describes a single 'falling stream' of randomized characters
@@ -140,7 +137,7 @@ impl<'a> Raindrop<'a> {
         // set up attributes that need setting up, pack them into a new instance, and return it
         let mut local_rng = rand::rng();
         let follower_content = Self::gen_follower_content(&mut local_rng, charset, terminal_height);
-        let row_index = Self::calc_initial_row(&mut local_rng, true);
+        let row_index = Self::calc_initial_row(&mut local_rng);
         let current_speed = speed.get_speed(&mut local_rng);
 
         Self {
@@ -188,15 +185,11 @@ impl<'a> Raindrop<'a> {
 
     /// Pseudorandomly determine what row index this `Raindrop` should start at
     ///
-    /// If `int_only` is true, will truncate row index to an integer. If false, return value
-    /// may or may not have a fractional component.
-    fn calc_initial_row<T: RngExt>(rng: &mut T, int_only: bool) -> f64 {
-        let out = rng.random_range(START_OFFSET_RANGE);
-        if int_only {
-            out.trunc()
-        } else {
-            out
-        }
+    /// This returns f64 because internally that's what `Raindrop` uses for its row index,
+    /// but the value of the f64 is always an integer - this means that raindrops with the same speed
+    /// will always advance on the same frame as each other (barring floating-point imprecision nonsense)
+    fn calc_initial_row<T: RngExt>(rng: &mut T) -> f64 {
+        rng.random_range(START_OFFSET_RANGE).trunc()
     }
 
     /// Re-initializes the state of the `Raindrop` instance
@@ -219,10 +212,7 @@ impl<'a> Raindrop<'a> {
             Self::gen_follower_content(&mut self.local_rng, self.charset, terminal_height);
 
         // update the row index
-        // if our speed is constant, our new row index must be an integer - this is so that in cases where all Raindrops
-        // have the same constant speed, they all advance on the same frame as each other.
-        let int_only = self.allowed_speeds.is_constant();
-        self.row_index = Self::calc_initial_row(&mut self.local_rng, int_only);
+        self.row_index = Self::calc_initial_row(&mut self.local_rng);
 
         // update the speed; note that if our speed is RaindropSpeed::Constant, this will return the same value every time.
         self.current_speed = self.allowed_speeds.get_speed(&mut self.local_rng);

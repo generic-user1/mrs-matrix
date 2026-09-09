@@ -51,6 +51,9 @@ impl RaindropSpeed {
             Self::Random(range) => range.sample(rng)
         }
     }
+    const fn is_constant(&self) -> bool {
+        matches!(self, Self::Constant(_))
+    }
 }
 
 /// A `Raindrop` describes a single 'falling stream' of randomized characters
@@ -199,6 +202,12 @@ impl<'a> Raindrop<'a> {
         // generate and store new row index value
         // this can be done in a single step
         self.row_index = self.local_rng.random_range(START_OFFSET_RANGE);
+
+        // if our speed is constant, truncate our row index - this is so that in cases where all Raindrops
+        // have the same constant speed, they all advance on the same frame as each other.
+        if self.allowed_speeds.is_constant() {
+            self.row_index = self.row_index.trunc();
+        }
 
         // update our speed
         self.current_speed = self.allowed_speeds.get_speed(&mut self.local_rng);

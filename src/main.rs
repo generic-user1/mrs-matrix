@@ -1,9 +1,9 @@
 use clap::{error::ErrorKind, ArgGroup, CommandFactory, Parser, ValueEnum};
 use mrs_matrix::anim_loop;
-use mrs_matrix::raindrop::charsets::Charset;
+
 use mrs_matrix::raindrop::{
-    charsets,
-    color_algorithms::{HueVariation, LightnessDescending},
+    charsets::{self, Charset},
+    color_algorithms::{ColorAlgorithm, HueVariation, LightnessDescending},
     RaindropSpeed
 };
 
@@ -93,23 +93,19 @@ fn to_raindrop_speed(
     }
 }
 
-fn main() -> crossterm::Result<()> {
-    let args = MainArgs::parse();
+/// Handle transforming the charset-related arguments into a concrete Vec<char>
+fn to_charset(custom_charset: Option<String>, charset_type: CharsetType) -> Vec<char> {
+    match (custom_charset, charset_type) {
+        (Some(charset), _) => charset.chars().collect(),
+        (_, CharsetType::Alphanumeric) => charsets::Alphanumeric().get_charset(),
+        (_, CharsetType::PrintableAscii) => charsets::PrintableAscii().get_charset(),
+        (_, CharsetType::AsciiAndSymbols) => charsets::AsciiAndSymbols().get_charset()
+    }
+}
 
-    let allowed_speeds = to_raindrop_speed(args.speed, args.min_speed, args.max_speed);
-    let target_framerate = args.framerate;
-
-    let charset = if let Some(charset) = args.custom_charset {
-        charset.chars().collect()
-    } else {
-        match args.charset {
-            CharsetType::Alphanumeric => charsets::Alphanumeric().get_charset(),
-            CharsetType::PrintableAscii => charsets::PrintableAscii().get_charset(),
-            CharsetType::AsciiAndSymbols => charsets::AsciiAndSymbols().get_charset()
-        }
-    };
-
-    let color_algorithm = match args.color_mode {
+/// Handle transforming the color mode argument into a concrete ColorAlgorithm
+fn to_color_algorithm(color_mode: ColorMode) -> ColorAlgorithm {
+    match color_mode {
         ColorMode::Green => LightnessDescending::try_new(118.0, 1.0).unwrap().into(),
 
         ColorMode::Blue => LightnessDescending::try_new(244.0, 1.0).unwrap().into(),
@@ -121,7 +117,20 @@ fn main() -> crossterm::Result<()> {
         ColorMode::Yellow => LightnessDescending::try_new(51.0, 1.0).unwrap().into(),
 
         ColorMode::Rainbow => HueVariation::try_new(1.0, 0.5).unwrap().into()
-    };
+    }
+}
+
+fn main() -> crossterm::Result<()> {
+    let args = MainArgs::parse();
+
+    let allowed_speeds = to_raindrop_speed(args.speed, args.min_speed, args.max_speed);
+
+    let target_framerate = args.framerate;
+
+    let charset = to_charset(args.custom_charset, args.charset);
+
+    let color_algorithm = to_color_algorithm(args.color_mode);
+
     anim_loop(&charset, color_algorithm, allowed_speeds, target_framerate)
 }
 

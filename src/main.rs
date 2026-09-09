@@ -11,7 +11,8 @@ use mrs_matrix::raindrop::{
 enum CharsetType {
     Alphanumeric,
     PrintableAscii,
-    AsciiAndSymbols
+    AsciiAndSymbols,
+    Katakana
 }
 
 #[derive(Debug, Clone, Copy, ValueEnum)]
@@ -99,7 +100,8 @@ fn to_charset(custom_charset: Option<String>, charset_type: CharsetType) -> Vec<
         (Some(charset), _) => charset.get_charset(),
         (_, CharsetType::Alphanumeric) => charsets::Alphanumeric().get_charset(),
         (_, CharsetType::PrintableAscii) => charsets::PrintableAscii().get_charset(),
-        (_, CharsetType::AsciiAndSymbols) => charsets::AsciiAndSymbols().get_charset()
+        (_, CharsetType::AsciiAndSymbols) => charsets::AsciiAndSymbols().get_charset(),
+        (_, CharsetType::Katakana) => charsets::Katakana().get_charset()
     }
 }
 

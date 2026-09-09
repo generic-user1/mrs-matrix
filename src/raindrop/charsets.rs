@@ -73,3 +73,15 @@ impl Charset for AsciiAndSymbols {
         outvec
     }
 }
+
+/// Half-width katakana characters; also used by cmatrix
+pub struct Katakana();
+impl Charset for Katakana {
+    fn get_charset(&self) -> Vec<char> {
+        const CHARCODE_RANGE: RangeInclusive<u32> = 0xFF66..=0xFF9D;
+        CHARCODE_RANGE
+            .into_iter()
+            .map(|x| char::from_u32(x).expect("tried to add invalid char to Katakana"))
+            .collect()
+    }
+}

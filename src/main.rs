@@ -1,4 +1,4 @@
-use clap::{ArgEnum, ArgGroup, Parser};
+use clap::{ArgGroup, Parser, ValueEnum};
 use mrs_matrix::anim_loop;
 use mrs_matrix::raindrop::charsets::Charset;
 use mrs_matrix::raindrop::{
@@ -7,14 +7,14 @@ use mrs_matrix::raindrop::{
     RaindropSpeed
 };
 
-#[derive(Debug, Clone, Copy, ArgEnum)]
+#[derive(Debug, Clone, Copy, ValueEnum)]
 enum CharsetType {
     Alphanumeric,
     PrintableAscii,
     AsciiAndSymbols
 }
 
-#[derive(Debug, Clone, Copy, ArgEnum)]
+#[derive(Debug, Clone, Copy, ValueEnum)]
 enum ColorMode {
     Green,
     Blue,
@@ -28,32 +28,32 @@ enum ColorMode {
 #[clap(version, about, long_about = None)]
 #[clap(group(
     ArgGroup::new("charsetgroup")
-    .args(&["charset", "custom-charset"]),
+    .args(&["charset", "custom_charset"]),
 ))]
-struct Args {
+struct MainArgs {
     /// Defines how characters will be colored.
-    #[clap(short, long, arg_enum, value_parser, default_value_t = ColorMode::Green)]
+    #[arg(short, long, value_enum, default_value_t = ColorMode::Green)]
     color_mode: ColorMode,
 
     /// Defines the character set that will be drawn from.
-    #[clap(long, arg_enum, value_parser, default_value_t = CharsetType::AsciiAndSymbols)]
+    #[arg(long, value_enum, default_value_t = CharsetType::AsciiAndSymbols)]
     charset: CharsetType,
 
     /// Run in synchronized scrolling mode
-    #[clap(short, long)]
+    #[arg(short, long)]
     sync_scrolling: bool,
 
     /// Sets the target framerate
-    #[clap(short, long, value_parser=framerate_in_range, default_value_t = 25)]
+    #[arg(short, long, value_parser=framerate_in_range, default_value_t = 25)]
     framerate: usize,
 
     /// Custom character set passed as a string
-    #[clap(long)]
+    #[arg(long)]
     custom_charset: Option<String>
 }
 
 fn main() -> crossterm::Result<()> {
-    let args = Args::parse();
+    let args = MainArgs::parse();
 
     let allowed_speeds = if args.sync_scrolling {
         RaindropSpeed::Constant(1.0)

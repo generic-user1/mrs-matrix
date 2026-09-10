@@ -89,7 +89,7 @@ fn to_raindrop_speed(
                 MainArgs::command()
                     .error(
                         ErrorKind::ValueValidation,
-                        "failed to construct range from --min-speed to --max-speed (likely because --max-speed was less than --min-speed)"
+                        "value for --max-speed was less than value for --min-speed"
                     )
                     .exit()
             }

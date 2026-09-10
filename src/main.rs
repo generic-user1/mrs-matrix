@@ -48,15 +48,15 @@ struct MainArgs {
     charset: CharsetType,
 
     /// Single speed in rows per frame
-    #[arg(short, long)]
+    #[arg(short, long, value_parser=float_is_positive_finite)]
     speed: Option<f64>,
 
     /// Minimum possible speed in rows per frame
-    #[arg(short = 'i', long, requires = "max_speed")]
+    #[arg(short = 'i', long, value_parser=float_is_positive_finite, requires = "max_speed")]
     min_speed: Option<f64>,
 
     /// Maximum possible speed in rows per frame
-    #[arg(short = 'a', long, requires = "min_speed")]
+    #[arg(short = 'a', long, value_parser=float_is_positive_finite, requires = "min_speed")]
     max_speed: Option<f64>,
 
     /// Sets the target framerate
@@ -145,14 +145,24 @@ fn main() -> crossterm::Result<()> {
     anim_loop(&charset, color_algorithm, allowed_speeds, target_framerate)
 }
 
+/// float parser/validator
+fn float_is_positive_finite(s: &str) -> Result<f64, &'static str> {
+    let float: f64 = s.parse().map_err(|_| "invalid float literal")?;
+    if !float.is_finite() {
+        Err("value must be finite (i.e. must not be NaN or infinite)")
+    } else if float <= 0.0 {
+        Err("value must be greater than 0")
+    } else {
+        Ok(float)
+    }
+}
+
 /// framerate parser/validator function
-fn framerate_in_range(s: &str) -> Result<usize, String> {
-    let framerate: usize = s
-        .parse()
-        .map_err(|_| format!("\"{}\" isn't a valid integer", s))?;
+fn framerate_in_range(s: &str) -> Result<usize, &'static str> {
+    let framerate: usize = s.parse().map_err(|_| "invalid integer literal")?;
 
     if framerate == 0 {
-        Err("framerate cannot be zero".to_owned())
+        Err("framerate cannot be zero")
     } else {
         Ok(framerate)
     }

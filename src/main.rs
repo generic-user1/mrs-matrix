@@ -131,7 +131,7 @@ fn to_color_algorithm(color_mode: ColorMode) -> ColorAlgorithm {
     }
 }
 
-fn main() -> crossterm::Result<()> {
+fn main() -> std::io::Result<()> {
     let args = MainArgs::parse();
 
     let allowed_speeds = to_raindrop_speed(args.speed, args.min_speed, args.max_speed);

@@ -3,7 +3,7 @@
 use crate::raindrop::{color_algorithms::ColorAlgorithm, Raindrop, RaindropSpeed};
 use crossterm::{
     self, cursor,
-    event::{self, Event},
+    event::{self, Event, KeyEvent, KeyEventKind},
     style::{Print, PrintStyledContent},
     terminal, QueueableCommand
 };
@@ -70,7 +70,7 @@ fn create_raindrops(
 /// use mrs_matrix::raindrop::color_algorithms::LightnessDescending;
 /// use mrs_matrix::raindrop::RaindropSpeed;
 ///
-/// pub fn main() -> crossterm::Result<()>
+/// pub fn main() -> std::io::Result<()>
 /// {
 ///     let charset = PrintableAscii().get_charset();
 ///     let color_algorithm = LightnessDescending::try_new(118.0, 0.82).unwrap().into();
@@ -84,7 +84,7 @@ pub fn anim_loop(
     color_algorithm: ColorAlgorithm,
     allowed_speeds: RaindropSpeed,
     target_framerate: usize
-) -> crossterm::Result<()> {
+) -> std::io::Result<()> {
     assert!(
         !charset.is_empty(),
         "cannot run anim_loop with empty character set"
@@ -125,9 +125,8 @@ pub fn anim_loop(
 
         //iterate through all rows
         for row_index in 0..term_rows {
-            //strangely, these commands seem to be 1 based, unlike MoveTo
-            out.queue(cursor::MoveToRow(row_index + 1))?
-                .queue(cursor::MoveToColumn(1))?;
+            out.queue(cursor::MoveToRow(row_index))?
+                .queue(cursor::MoveToColumn(0))?;
 
             //iterate through all columns by iterating through raindrop_vector, printing styled chars where applicable
             //note that spaces are printed for columns on this row without a printable char
@@ -163,8 +162,19 @@ pub fn anim_loop(
                         term_rows
                     );
                 }
-                //stop loop upon recieving a mouse or key event
-                _ => break
+                //ignore focus and key release events
+                //documentation for crossterm indicates that these aren't captured by default, but it seems they're captured here anyway
+                Event::FocusGained
+                | Event::FocusLost
+                | Event::Key(KeyEvent {
+                    kind: KeyEventKind::Release,
+                    ..
+                }) => (),
+
+                //stop loop upon recieving any other event
+                _ => {
+                    break;
+                }
             }
         }
     }

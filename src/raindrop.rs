@@ -4,7 +4,6 @@ use crossterm::style::{self, Stylize};
 use rand::{
     self,
     distr::{uniform::Uniform, Distribution},
-    rngs,
     seq::IndexedRandom,
     Rng, RngExt
 };
@@ -83,14 +82,13 @@ pub struct Raindrop<'a> {
     allowed_speeds: RaindropSpeed,
 
     // ColorAlgorithm that is used to color follower chars
-    color_algorithm: ColorAlgorithm,
-
-    // locally cached random number generator
-    local_rng: rngs::ThreadRng
+    color_algorithm: ColorAlgorithm
 }
 
 impl<'a> Raindrop<'a> {
     /// Returns a new `Raindrop` instance
+    ///
+    /// `rng` is the source of randomness to use.
     ///
     /// `charset` specifies what chars the `Raindrop` may use, and must not be empty.
     ///
@@ -119,10 +117,13 @@ impl<'a> Raindrop<'a> {
     ///
     /// let term_height = terminal::size().unwrap().1;
     ///
-    /// let new_raindrop_instance = Raindrop::new(&charset, color_algorithm, speed, term_height);
+    /// let mut rng = rand::rng();
+    ///
+    /// let new_raindrop_instance = Raindrop::new(&mut rng, &charset, color_algorithm, speed, term_height);
     /// // do something with instance
     /// ```
-    pub fn new(
+    pub fn new<T: RngExt>(
+        rng: &mut T,
         charset: &'a [char],
         color_algorithm: ColorAlgorithm,
         speed: RaindropSpeed,
@@ -134,15 +135,13 @@ impl<'a> Raindrop<'a> {
         );
 
         // set up attributes that need setting up, pack them into a new instance, and return it
-        let mut local_rng = rand::rng();
-        let follower_content = Self::gen_follower_content(&mut local_rng, charset, terminal_height);
-        let row_index = Self::calc_initial_row(&mut local_rng);
-        let current_speed = speed.get_speed(&mut local_rng);
+        let follower_content = Self::gen_follower_content(rng, charset, terminal_height);
+        let row_index = Self::calc_initial_row(rng);
+        let current_speed = speed.get_speed(rng);
 
         Self {
             charset,
             color_algorithm,
-            local_rng: rand::rng(),
             follower_content,
             row_index,
             current_speed,
@@ -204,16 +203,15 @@ impl<'a> Raindrop<'a> {
     ///
     /// This function is similar to creating a new `Raindrop` instance outright,
     /// but avoids the need to swap an old instance for a new instance
-    pub fn reinit_state(&mut self, terminal_height: u16) {
+    pub fn reinit_state<T: RngExt>(&mut self, rng: &mut T, terminal_height: u16) {
         //update the follower
-        self.follower_content =
-            Self::gen_follower_content(&mut self.local_rng, self.charset, terminal_height);
+        self.follower_content = Self::gen_follower_content(rng, self.charset, terminal_height);
 
         // update the row index
-        self.row_index = Self::calc_initial_row(&mut self.local_rng);
+        self.row_index = Self::calc_initial_row(rng);
 
         // update the speed; note that if our speed is RaindropSpeed::Constant, this will return the same value every time.
-        self.current_speed = self.allowed_speeds.get_speed(&mut self.local_rng);
+        self.current_speed = self.allowed_speeds.get_speed(rng);
     }
 
     /// Get the integer portion of this `Raindrop`'s row index
@@ -228,7 +226,7 @@ impl<'a> Raindrop<'a> {
     ///
     /// This function returns `None` when this `Raindrop has no char for the given row
     /// (because, for example, this `Raindrop` is above the provided row).
-    pub fn get_char_at_row(&mut self, row_index: u16) -> Option<char> {
+    pub fn get_char_at_row<T: RngExt>(&mut self, rng: &mut T, row_index: u16) -> Option<char> {
         // cast provided row index to i32 and bind to a more clear name
         // we only want to accept valid u16 values, but want the value to be an i32 for
         // comparisons and math with our own row index
@@ -244,7 +242,7 @@ impl<'a> Raindrop<'a> {
         // return a randomly selected char if provided row index points to the leader of this Raindrop
         // (i.e. if the provided row index and current row index match exactly)
         if our_row_index == provided_row_index {
-            return Some(Self::gen_char(&mut self.local_rng, self.charset));
+            return Some(Self::gen_char(rng, self.charset));
         }
 
         // we already checked if provided row index was greater than row index
@@ -276,8 +274,12 @@ impl<'a> Raindrop<'a> {
     /// according to this `Raindrop`'s `color_algorithm`
     ///
     /// The leader (lowermost character) of the `Raindrop` will always be styled white (and bolded).
-    pub fn get_styled_char_at_row(&mut self, row_index: u16) -> Option<style::StyledContent<char>> {
-        match self.get_char_at_row(row_index) {
+    pub fn get_styled_char_at_row<T: RngExt>(
+        &mut self,
+        rng: &mut T,
+        row_index: u16
+    ) -> Option<style::StyledContent<char>> {
+        match self.get_char_at_row(rng, row_index) {
             //if get_char_at_row returns None, return None immediately
             None => None,
             Some(unstyled_char) => {
@@ -331,12 +333,12 @@ impl<'a> Raindrop<'a> {
     /// if the `Raindrop` is not visible because it has fallen down below the bottom of the terminal,
     /// [reinit_state](crate::raindrop::Raindrop::reinit_state) is called to re-randomize the `Raindrop` and
     /// move it slightly above the top of the terminal.
-    pub fn advance_animation(&mut self, terminal_height: u16) {
+    pub fn advance_animation<T: RngExt>(&mut self, rng: &mut T, terminal_height: u16) {
         // only perform visibility check if current row is not less than 0
         // if we didn't make this check conditional, advance_animation would continuously call reinit_state
         // as raindrops always start above row 0 but are never visible until they reach row 0
         if !(self.int_row_index() < 0) && !self.is_visible(terminal_height) {
-            self.reinit_state(terminal_height);
+            self.reinit_state(rng, terminal_height);
             return;
         }
 

@@ -142,7 +142,15 @@ fn main() -> std::io::Result<()> {
 
     let color_algorithm = to_color_algorithm(args.color_mode);
 
-    anim_loop(&charset, color_algorithm, allowed_speeds, target_framerate)
+    let mut rng = rand::rng();
+
+    anim_loop(
+        &mut rng,
+        &charset,
+        color_algorithm,
+        allowed_speeds,
+        target_framerate
+    )
 }
 
 /// float parser/validator

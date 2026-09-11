@@ -7,11 +7,14 @@ use crossterm::{
     style::{Print, PrintStyledContent},
     terminal, QueueableCommand
 };
+use rand::RngExt;
 
 use std::io::{stdout, Write};
 use std::time::{Duration, Instant};
 
 /// Returns a `Vec<Raindrop>` with one `Raindrop` for each terminal column
+///
+/// `rng` is the source of randomness to use.
 ///
 /// `charset` is be the set of characters that the raindrops will be generated from.
 ///
@@ -20,17 +23,19 @@ use std::time::{Duration, Instant};
 /// `terminal_width` should be the width of the terminal in columns
 ///
 /// `terminal_height` should be the height of the terminal in rows
-fn create_raindrops(
-    charset: &[char],
+fn create_raindrops<'a, T: RngExt>(
+    rng: &mut T,
+    charset: &'a [char],
     color_algorithm: ColorAlgorithm,
     allowed_speeds: RaindropSpeed,
     terminal_width: u16,
     terminal_height: u16
-) -> Vec<Raindrop<'_>> {
+) -> Vec<Raindrop<'a>> {
     let mut raindrop_vec: Vec<Raindrop> = Vec::with_capacity(terminal_width.into());
 
     for _ in 0..terminal_width {
         let new_raindrop = Raindrop::new(
+            rng,
             charset,
             color_algorithm.clone(),
             allowed_speeds.clone(),
@@ -45,6 +50,8 @@ fn create_raindrops(
 /// The main loop that renders the screen
 ///
 /// Returns after receiving any keypress
+///
+/// `rng` is the source of randomness to use.
 ///
 /// `charset` will be the set of characters that will be
 /// displayed within the animation.
@@ -74,10 +81,12 @@ fn create_raindrops(
 ///     let color_algorithm = LightnessDescending::try_new(118.0, 0.82).unwrap().into();
 ///     let speed = RaindropSpeed::Constant(0.75);
 ///     let target_framerate = 25;
-///     anim_loop(&charset, color_algorithm, speed, target_framerate)
+///     let mut rng = rand::rng();
+///     anim_loop(&mut rng, &charset, color_algorithm, speed, target_framerate)
 /// }
 /// ```
-pub fn anim_loop(
+pub fn anim_loop<T: RngExt>(
+    rng: &mut T,
     charset: &[char],
     color_algorithm: ColorAlgorithm,
     allowed_speeds: RaindropSpeed,
@@ -107,6 +116,7 @@ pub fn anim_loop(
     let target_frame_duration = Duration::from_secs_f64(1.0 / (target_framerate as f64));
 
     let mut raindrop_vector = create_raindrops(
+        rng,
         charset,
         color_algorithm.clone(),
         allowed_speeds.clone(),
@@ -129,7 +139,7 @@ pub fn anim_loop(
             //iterate through all columns by iterating through raindrop_vector, printing styled chars where applicable
             //note that spaces are printed for columns on this row without a printable char
             for raindrop in raindrop_vector.iter_mut() {
-                match raindrop.get_styled_char_at_row(row_index) {
+                match raindrop.get_styled_char_at_row(rng, row_index) {
                     None => out.queue(Print(" "))?,
                     Some(styled_char) => out.queue(PrintStyledContent(styled_char))?
                 };
@@ -141,7 +151,7 @@ pub fn anim_loop(
 
         //call advance_animation on all the raindrops
         for raindrop in raindrop_vector.iter_mut() {
-            raindrop.advance_animation(term_rows);
+            raindrop.advance_animation(rng, term_rows);
         }
 
         //wait for enough time to hit target_frame_duration, or no time if frame duration exceeds target
@@ -153,6 +163,7 @@ pub fn anim_loop(
                     term_rows = new_rows;
 
                     raindrop_vector = create_raindrops(
+                        rng,
                         charset,
                         color_algorithm.clone(),
                         allowed_speeds.clone(),

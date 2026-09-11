@@ -13,8 +13,7 @@ use std::time::{Duration, Instant};
 
 /// Returns a `Vec<Raindrop>` with one `Raindrop` for each terminal column
 ///
-/// `charset` should be a reference to a Vector of chars. This will be the set of
-/// characters that the raindrops will be generated from.
+/// `charset` is be the set of characters that the raindrops will be generated from.
 ///
 /// `allowed_speeds` defines what speeds each `Raindrop` is allowed to have.
 ///
@@ -47,13 +46,12 @@ fn create_raindrops(
 ///
 /// Returns after receiving any keypress
 ///
-/// `charset` should be a `&[char]`. This will be the set of characters that will be
+/// `charset` will be the set of characters that will be
 /// displayed within the animation.
 ///
-/// `color_algorithm` should be an instance of a type implementing [ColorAlgorithm], such as
-/// [LightnessDescending](crate::raindrop::color_algorithms::LightnessDescending).
+/// `color_algorithm` defines how follower characters will be colored.
 ///
-/// `allowed_speeds` defines what speeds each [Raindrop] is allowed to have (see [RaindropSpeed]).
+/// `allowed_speeds` defines what speeds each [Raindrop] is allowed to have.
 ///
 /// `target_framerate` should be the number of frames per second to target.
 ///

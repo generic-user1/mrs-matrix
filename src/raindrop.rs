@@ -34,13 +34,13 @@ const START_OFFSET_RANGE: std::ops::RangeInclusive<f64> = -64.0..=-1.0;
 /// of the screen and has yet to drop in from the top of the screen.
 #[derive(Debug, Clone)]
 pub enum RaindropSpeed {
-    /// Use a constant speed
+    /// Use a constant speed.
     Constant(f64),
 
-    /// Define a range of speeds the [Raindrop] is allowed to have
+    /// Define a range of speeds the [Raindrop] is allowed to have.
     /// One specific speed will be chosen at random when the [Raindrop]
     /// begins to fall, and a new speed will be chosen when it reaches the end of the screen
-    /// and begins to fall again
+    /// and begins to fall again.
     Random(Uniform<f64>)
 }
 
@@ -94,8 +94,7 @@ impl<'a> Raindrop<'a> {
     ///
     /// `charset` specifies what chars the `Raindrop` may use, and must not be empty.
     ///
-    /// `color_algorithm` should be a [ColorAlgorithm].
-    /// It defines how follower characters will be colored.
+    /// `color_algorithm` defines how characters will be colored.
     ///
     /// `allowed_speeds` defines what speeds the `Raindrop` is allowed to have.
     /// The speed of a raindrop is how fast it moves down the screen, measured in rows per frame.
@@ -203,9 +202,8 @@ impl<'a> Raindrop<'a> {
     ///
     /// # Notes
     ///
-    /// The [Raindrop::new](crate::raindrop::Raindrop::new) function uses this function internally
-    /// to set the initial state. Calling this function manually is similar to creating
-    /// a new `Raindrop` instance outright, but avoids the need to create a new [Rng].
+    /// This function is similar to creating a new `Raindrop` instance outright,
+    /// but avoids the need to swap an old instance for a new instance
     pub fn reinit_state(&mut self, terminal_height: u16) {
         //update the follower
         self.follower_content =
@@ -228,8 +226,8 @@ impl<'a> Raindrop<'a> {
     ///
     /// # Notes
     ///
-    /// This function returns `None` when this raindrop has no char for the given row
-    /// (because, for example, this raindrop is above the provided row).
+    /// This function returns `None` when this `Raindrop has no char for the given row
+    /// (because, for example, this `Raindrop` is above the provided row).
     pub fn get_char_at_row(&mut self, row_index: u16) -> Option<char> {
         // cast provided row index to i32 and bind to a more clear name
         // we only want to accept valid u16 values, but want the value to be an i32 for
@@ -274,10 +272,10 @@ impl<'a> Raindrop<'a> {
 
     /// Returns the character that should be printed for a given row with appropriate styling
     ///
-    /// Internally, uses `get_styled_char` to retrieve the actual character. Then applies a color
+    /// Internally, uses `get_char_at_row` to retrieve the actual character. Then applies a color
     /// according to this `Raindrop`'s `color_algorithm`
     ///
-    /// The leader of the raindrop will always be styled white (and bolded).
+    /// The leader (lowermost character) of the `Raindrop` will always be styled white (and bolded).
     pub fn get_styled_char_at_row(&mut self, row_index: u16) -> Option<style::StyledContent<char>> {
         match self.get_char_at_row(row_index) {
             //if get_char_at_row returns None, return None immediately
@@ -314,7 +312,7 @@ impl<'a> Raindrop<'a> {
         self.row_index += self.current_speed
     }
 
-    /// Returns `true` if Raindrop displays any chars on a terminal of height `terminal_height`; `false` otherwise
+    /// Returns `true` if this `Raindrop` displays any characters on a terminal of height `terminal_height`; `false` otherwise
     pub fn is_visible(&self, terminal_height: u16) -> bool {
         // if row_index is less than zero, return false immediately
         let row_index = self.int_row_index();
@@ -329,7 +327,7 @@ impl<'a> Raindrop<'a> {
     ///
     /// `terminal_height` should be the current height of the terminal, in rows.
     ///
-    /// This is similar to [move_drop](crate::raindrop::Raindrop::move_drop), with one key difference
+    /// This is similar to [move_drop](crate::raindrop::Raindrop::move_drop), with one key difference:
     /// if the `Raindrop` is not visible because it has fallen down below the bottom of the terminal,
     /// [reinit_state](crate::raindrop::Raindrop::reinit_state) is called to re-randomize the `Raindrop` and
     /// move it slightly above the top of the terminal.

@@ -297,7 +297,7 @@ impl<'a> Raindrop<'a> {
                     let follower_proportion =
                         (position_in_follower / follower_length).clamp(0.0, 1.0);
 
-                    let char_color = self.color_algorithm.gen_color(follower_proportion);
+                    let char_color = self.color_algorithm.gen_color(follower_proportion).unwrap();
 
                     Some(unstyled_char.with(char_color.into()))
                 }

@@ -32,16 +32,13 @@ impl ColorAlgorithm {
     ///
     /// The `follower_proportion` should be within the range `[0.0, 1.0]` and represents
     /// how far away this char is from the leader (with 1.0 being max distance)
-    ///
-    ///# Notes
-    ///
-    /// This function panics if `follower_proportion` is less than 0 or greater than 1.
-    pub fn gen_color(&self, follower_proportion: f32) -> Color {
-        assert!(
-            UNIT_INTERVAL.contains(&follower_proportion),
-            "follower_proportion outside of expected bounds [0, 1]"
-        );
-        match self {
+    pub fn gen_color(&self, follower_proportion: f32) -> Result<Color, GenColorError> {
+        if !UNIT_INTERVAL.contains(&follower_proportion) {
+            return Err(GenColorError::FollowerProportionOutOfBounds(
+                follower_proportion
+            ));
+        }
+        Ok(match self {
             Self::LightnessDescending(LightnessDescending { hue, saturation }) => {
                 //determine color lightness by subtracting the follower_proportion from 0.9;
                 //this results in follower chars decreasing in brightness as their distance
@@ -76,9 +73,30 @@ impl ColorAlgorithm {
                     l: *lightness
                 })
             }
+        })
+    }
+}
+
+/// Reasons [ColorAlgorithm::gen_color] may fail
+#[derive(Debug)]
+pub enum GenColorError {
+    /// The `follower_proportion` specified was out of bounds. Includes the offending `follower_proportion` value
+    FollowerProportionOutOfBounds(f32)
+}
+impl Display for GenColorError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::FollowerProportionOutOfBounds(p) => {
+                write!(
+                    f,
+                    "follower proportion {} outside of expected bounds [0, 1]",
+                    p
+                )
+            }
         }
     }
 }
+impl std::error::Error for GenColorError {}
 
 /// Reasons creating a [ColorAlgorithm] (more specifically, one of the structs that [ColorAlgorithm] uses) may fail
 #[derive(Debug)]

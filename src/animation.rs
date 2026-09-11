@@ -69,7 +69,7 @@ fn create_raindrops<'a, T: RngExt>(
 /// This function panics if `target_framerate` is zero.
 ///
 /// # Examples
-/// ```
+/// ```no_run
 /// use mrs_matrix::animation::anim_loop;
 /// use mrs_matrix::raindrop::charsets::{Charset, PrintableAscii};
 /// use mrs_matrix::raindrop::color_algorithms::LightnessDescending;

@@ -9,11 +9,11 @@ license = "MIT"
 readme = "README.md"
 keywords = ["matrix", "cmatrix", "multiplatform"]
 categories = ["command-line-utilities", "games"]
-version = "1.0.2"
+version = "2.0.0"
 
 
 [dependencies]
-crossterm = "0.23.2"
-coolor = {version = "0.5.0", features=["crossterm"]}
-rand = "0.8.5"
-clap = {version = "3.2.6", features = ["derive"]}
+crossterm = "0.29.0"
+coolor = { version = "1.1.0", features = ["crossterm"] }
+rand = "0.10.2"
+clap = { version = "4.6.6", features = ["derive"] }

@@ -1,127 +1,217 @@
 //! Algorithms that determine the color of `Raindrop` follower characters
+use std::{
+    fmt::Display,
+    ops::{Range, RangeInclusive}
+};
+
+const UNIT_INTERVAL: RangeInclusive<f32> = 0.0..=1.0;
+const DEG_INTERVAL: Range<f32> = 0.0..360.0;
 
 use coolor::{Color, Hsl};
 
-pub trait ColorAlgorithm: Sized + Copy{
-    
-    ///Returns a [Color](coolor::Color) that will be applied to a character
-    /// 
-    /// Passed a `follower_proportion` within the range `[0.0, 1.0]` representing
-    /// how far away this char is from the leader (with 1.0 being max distance)
-    /// 
-    ///# Notes
-    /// 
-    /// This function should panic if `follower_proportion` is less than 0 or greater than 1.
-    fn gen_color(&self, follower_proportion: f32) -> Color;
-
+/// Different algorithms for how to color the different characters in a [Raindrop](crate::raindrop::Raindrop)
+///
+/// The easiset way to create a `ColorAlgorithm` is to create the corresponding struct first, then use [From] or [Into] to
+/// get a `ColorAlgorithm` from that. For example:
+/// ```
+/// use mrs_matrix::raindrop::color_algorithms::{ColorAlgorithm, LightnessDescending};
+///
+/// let color_algorithm: ColorAlgorithm = LightnessDescending::try_new(118.0, 0.82).unwrap().into();
+/// ```
+#[derive(Clone)]
+pub enum ColorAlgorithm {
+    /// Colors characters with varying lightness according to their distance from the leader
+    LightnessDescending(LightnessDescending),
+    /// Colors characters with varying saturation according to their distance from the leader
+    SaturationDescending(SaturationDescending),
+    /// Colors characters with varying hue according to their distance from the leader
+    HueVariation(HueVariation)
 }
+impl ColorAlgorithm {
+    /// Returns a [Color] that will be applied to a character
+    ///
+    /// The `follower_proportion` should be within the range `[0.0, 1.0]` and represents
+    /// how far away this char is from the leader (with 1.0 being max distance)
+    pub fn gen_color(&self, follower_proportion: f32) -> Result<Color, GenColorError> {
+        if !UNIT_INTERVAL.contains(&follower_proportion) {
+            return Err(GenColorError::FollowerProportionOutOfBounds(
+                follower_proportion
+            ));
+        }
+        Ok(match self {
+            Self::LightnessDescending(LightnessDescending { hue, saturation }) => {
+                //determine color lightness by subtracting the follower_proportion from 0.9;
+                //this results in follower chars decreasing in brightness as their distance
+                //from the leader increases
+                coolor::Color::Hsl(Hsl {
+                    h: *hue,
+                    s: *saturation,
+                    //use of max ensures lightness is always 0.1 or above
+                    l: ((0.9 - follower_proportion).max(0.1))
+                })
+            }
+            Self::SaturationDescending(SaturationDescending { hue, lightness }) => {
+                //determine color saturation by subtracting the follower_proportion from 1.0;
+                //this results in follower chars decreasing in saturation as their distance
+                //from the leader increases
+                coolor::Color::Hsl(Hsl {
+                    h: *hue,
+                    l: *lightness,
+                    //use of max ensures saturation is always 0.0 or above
+                    s: ((1.0 - follower_proportion).max(0.0))
+                })
+            }
+            Self::HueVariation(HueVariation {
+                saturation,
+                lightness
+            }) => {
+                //determine color hue by multiplying follower proportion by 360,
+                //producing a valid hue value unique for each char position
+                coolor::Color::Hsl(Hsl {
+                    h: follower_proportion * 360.0,
+                    s: *saturation,
+                    l: *lightness
+                })
+            }
+        })
+    }
+}
+
+/// Reasons [ColorAlgorithm::gen_color] may fail
+#[derive(Debug)]
+pub enum GenColorError {
+    /// The `follower_proportion` specified was out of bounds. Includes the offending `follower_proportion` value
+    FollowerProportionOutOfBounds(f32)
+}
+impl Display for GenColorError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::FollowerProportionOutOfBounds(p) => {
+                write!(
+                    f,
+                    "follower proportion {} outside of expected bounds [0, 1]",
+                    p
+                )
+            }
+        }
+    }
+}
+impl std::error::Error for GenColorError {}
+
+/// Reasons creating a [ColorAlgorithm] (more specifically, one of the structs that [ColorAlgorithm] uses) may fail
+#[derive(Debug)]
+pub enum ColorAlgorithmError {
+    /// The lightness specified was out of bounds. Includes the offending lightness value
+    LightnessOutOfBounds(f32),
+
+    /// The saturation specified was out of bounds. Includes the offending saturation value
+    SaturationOutOfBounds(f32),
+
+    /// The hue specified was out of bounds. Includes the offending hue value
+    HueOutOfBounds(f32)
+}
+impl Display for ColorAlgorithmError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::HueOutOfBounds(h) => {
+                write!(f, "hue {} outside of expected bounds [0, 360)", h)
+            }
+            Self::SaturationOutOfBounds(s) => {
+                write!(f, "saturation {} outside of expected bounds [0, 1]", s)
+            }
+            Self::LightnessOutOfBounds(l) => {
+                write!(f, "lightness {} outside of expected bounds [0, 1]", l)
+            }
+        }
+    }
+}
+impl std::error::Error for ColorAlgorithmError {}
 
 /// Colors characters with varying lightness according to their distance from the leader
-/// 
-/// `hue` is the hue degree of the base color. It must be within the range `(0.0, 360.0]`.
-/// 
-/// `saturation` is the saturation amount of the base color. It must be within the range `(0.0, 1.0)`.
-/// 
-///# Notes
-/// 
-/// If `hue` or `saturation` are outside of their expected ranges, `gen_color` will panic
-#[derive(Copy, Clone)]
+#[derive(Clone)]
 pub struct LightnessDescending {
-    pub hue: f32,
-    pub saturation: f32
+    hue: f32,
+    saturation: f32
 }
-impl ColorAlgorithm for LightnessDescending {
-
-    fn gen_color(&self, follower_proportion: f32) -> Color {
-        assert!(follower_proportion >= 0.0 && follower_proportion <= 1.0,
-            "follower_proportion outside of expected bounds (0, 1)");
-        assert!(self.hue >= 0.0 && self.hue < 360.0, "hue outside of expected bounds (0, 360]");
-        assert!(self.saturation >= 0.0 && self.saturation <= 1.0, 
-            "saturation outside of expected bounds (0, 1)");
-
-            //determine color lightness by subtracting the follower_proportion from 0.9; 
-            //this results in follower chars decreasing in brightness as their distance 
-            //from the leader increases
-            
-            coolor::Color::Hsl(
-                Hsl{     
-                    h:self.hue, 
-                    s:self.saturation,
-                    //use of max ensures lightness is always 0.1 or above 
-                    l:((0.9 - follower_proportion).max(0.1))
-                }
-            )
+impl LightnessDescending {
+    /// Create a new LightnessDescending
+    ///
+    /// `hue` is the hue degree of the base color. It must be within the range `[0.0, 360.0)`.
+    ///
+    /// `saturation` is the saturation amount of the base color. It must be within the range `[0.0, 1.0]`.
+    pub fn try_new(hue: f32, saturation: f32) -> Result<Self, ColorAlgorithmError> {
+        if !DEG_INTERVAL.contains(&hue) {
+            return Err(ColorAlgorithmError::HueOutOfBounds(hue));
+        }
+        if !UNIT_INTERVAL.contains(&saturation) {
+            return Err(ColorAlgorithmError::SaturationOutOfBounds(saturation));
+        }
+        Ok(Self { hue, saturation })
     }
-
+}
+impl From<LightnessDescending> for ColorAlgorithm {
+    fn from(value: LightnessDescending) -> Self {
+        ColorAlgorithm::LightnessDescending(value)
+    }
 }
 
 /// Colors characters with varying saturation according to their distance from the leader
-/// 
-/// `hue` is the hue degree of the base color. It must be within the range `(0.0, 360.0]`.
-/// 
-/// `lightness` is the lightness amount of the base color. It must be within the range `(0.0, 1.0)`.
-/// 
-///# Notes
-/// 
-/// If `hue` or `lightness` are outside of their expected ranges, `gen_color` will panic
-#[derive(Clone, Copy)]
-pub struct SaturationDescending{
-    pub hue: f32,
-    pub lightness: f32
+#[derive(Clone)]
+pub struct SaturationDescending {
+    hue: f32,
+    lightness: f32
 }
-impl ColorAlgorithm for SaturationDescending {
-    fn gen_color(&self, follower_proportion: f32) -> Color {
-        assert!(follower_proportion >= 0.0 && follower_proportion <= 1.0,
-            "follower_proportion outside of expected bounds (0, 1)");
-        assert!(self.hue >= 0.0 && self.hue < 360.0, "hue outside of expected bounds (0, 360]");
-        assert!(self.lightness >= 0.0 && self.lightness <= 1.0, 
-            "lightness outside of expected bounds (0, 1)");
+impl SaturationDescending {
+    /// Create a new SaturationDescending
+    ///
+    /// `hue` is the hue degree of the base color. It must be within the range `[0, 360)`.
+    ///
+    /// `lightness` is the lightness amount of the base color. It must be within the range `[0.0, 1.0]`.
+    pub fn try_new(hue: f32, lightness: f32) -> Result<Self, ColorAlgorithmError> {
+        if !DEG_INTERVAL.contains(&hue) {
+            return Err(ColorAlgorithmError::HueOutOfBounds(hue));
+        }
+        if !UNIT_INTERVAL.contains(&lightness) {
+            return Err(ColorAlgorithmError::LightnessOutOfBounds(lightness));
+        }
 
-            //determine color saturation by subtracting the follower_proportion from 1.0; 
-            //this results in follower chars decreasing in saturation as their distance 
-            //from the leader increases
-            coolor::Color::Hsl(
-                Hsl{     
-                    h:self.hue, 
-                    l:self.lightness,
-                    //use of max ensures saturation is always 0.0 or above 
-                    s:((1.0 - follower_proportion).max(0.0))
-                }
-            )
+        Ok(Self { hue, lightness })
+    }
+}
+impl From<SaturationDescending> for ColorAlgorithm {
+    fn from(value: SaturationDescending) -> Self {
+        ColorAlgorithm::SaturationDescending(value)
     }
 }
 
 /// Colors characters with varying hue according to their distance from the leader
-/// 
-/// `saturation` is the saturation amount of the base color. It must be within the range `(0.0, 1.0)`.
-/// 
-/// `lightness` is the lightness amount of the base color. It must be within the range `(0.0, 1.0)`.
-///
-///# Notes
-///  
-/// If `hue` or `lightness` are outside of their expected ranges, `gen_color` will panic
-#[derive(Clone, Copy)]
+#[derive(Clone)]
 pub struct HueVariation {
-    pub saturation: f32,
-    pub lightness: f32
+    saturation: f32,
+    lightness: f32
 }
-impl ColorAlgorithm for HueVariation {
-    fn gen_color(&self, follower_proportion: f32) -> Color {
-        assert!(follower_proportion >= 0.0 && follower_proportion <= 1.0,
-            "follower_proportion outside of expected bounds (0, 1)");
-        assert!(self.saturation >= 0.0 && self.saturation <= 1.0, 
-            "saturation outside of expected bounds (0, 1)");
-        assert!(self.lightness >= 0.0 && self.lightness <= 1.0, 
-            "lightness outside of expected bounds (0, 1)");
+impl HueVariation {
+    /// Create a new HueVariation
+    ///
+    /// `saturation` is the saturation amount of the base color. It must be within the range `[0.0, 1.0]`.
+    ///
+    /// `lightness` is the lightness amount of the base color. It must be within the range `[0.0, 1.0]`.
+    pub fn try_new(saturation: f32, lightness: f32) -> Result<Self, ColorAlgorithmError> {
+        if !UNIT_INTERVAL.contains(&saturation) {
+            return Err(ColorAlgorithmError::SaturationOutOfBounds(saturation));
+        }
+        if !UNIT_INTERVAL.contains(&lightness) {
+            return Err(ColorAlgorithmError::LightnessOutOfBounds(lightness));
+        }
 
-            //determine color hue by multiplying follower proportion by 360,
-            //producing a valid hue value unique for each char position
-            coolor::Color::Hsl(
-                Hsl{     
-                    h:follower_proportion * 360.0,
-                    s:self.saturation, 
-                    l:self.lightness
-                }
-            )
+        Ok(Self {
+            saturation,
+            lightness
+        })
+    }
+}
+impl From<HueVariation> for ColorAlgorithm {
+    fn from(value: HueVariation) -> Self {
+        ColorAlgorithm::HueVariation(value)
     }
 }

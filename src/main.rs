@@ -1,16 +1,23 @@
-use mrs_matrix::anim_loop;
-use mrs_matrix::raindrop::charsets::Charset;
-use mrs_matrix::raindrop::{charsets, color_algorithms};
-use clap::{ArgEnum, ArgGroup, Parser};
+use std::ops::RangeInclusive;
 
-#[derive(Debug, Clone, Copy, ArgEnum)]
+use clap::{error::ErrorKind, ArgGroup, CommandFactory, Parser, ValueEnum};
+use mrs_matrix::anim_loop;
+
+use mrs_matrix::raindrop::{
+    charsets::{self, Charset},
+    color_algorithms::{ColorAlgorithm, HueVariation, LightnessDescending},
+    RaindropSpeed
+};
+
+#[derive(Debug, Clone, Copy, ValueEnum)]
 enum CharsetType {
     Alphanumeric,
     PrintableAscii,
-    AsciiAndSymbols
+    AsciiAndSymbols,
+    Katakana
 }
 
-#[derive(Debug, Clone, Copy, ArgEnum)]
+#[derive(Debug, Clone, Copy, ValueEnum)]
 enum ColorMode {
     Green,
     Blue,
@@ -21,114 +28,149 @@ enum ColorMode {
 }
 
 #[derive(Debug, Parser)]
-#[clap(version, about, long_about = None)]
-#[clap(group(
+#[command(version, about, long_about = None)]
+#[command(group(
     ArgGroup::new("charsetgroup")
-    .args(&["charset", "custom-charset"]),
+    .args(&["charset", "custom_charset"])
 ))]
-struct Args {
-   
+//These two groups "speedmin" and "speedmax" are to enforce that speed can't be used with min_speed or max_speed,
+//but min_speed and max_speed can (and in fact must) be used with each other.
+//It feels like there ought to be a better way to express this.
+#[command(group(ArgGroup::new("speedmin").args(&["speed", "min_speed"])))]
+#[command(group(ArgGroup::new("speedmax").args(&["speed", "max_speed"])))]
+struct MainArgs {
     /// Defines how characters will be colored.
-    #[clap(short, long, arg_enum, value_parser, default_value_t = ColorMode::Green)]
+    #[arg(short, long, value_enum, default_value_t = ColorMode::Green)]
     color_mode: ColorMode,
 
     /// Defines the character set that will be drawn from.
-    #[clap(long, arg_enum, value_parser, default_value_t = CharsetType::AsciiAndSymbols)]
+    #[arg(long, value_enum, default_value_t = CharsetType::AsciiAndSymbols)]
     charset: CharsetType,
 
-    /// Run in synchronized scrolling mode
-    #[clap(short, long)]
-    sync_scrolling: bool,
+    /// Single speed in rows per frame
+    #[arg(short, long, value_parser=float_is_positive_finite)]
+    speed: Option<f64>,
+
+    /// Minimum possible speed in rows per frame
+    #[arg(short = 'i', long, value_parser=float_is_positive_finite, requires = "max_speed")]
+    min_speed: Option<f64>,
+
+    /// Maximum possible speed in rows per frame
+    #[arg(short = 'a', long, value_parser=float_is_positive_finite, requires = "min_speed")]
+    max_speed: Option<f64>,
 
     /// Sets the target framerate
-    #[clap(short, long, value_parser=framerate_in_range, default_value_t = 25)]
+    #[arg(short, long, value_parser=framerate_in_range, default_value_t = 25)]
     framerate: usize,
 
     /// Custom character set passed as a string
-    #[clap(long)]
+    #[arg(long)]
     custom_charset: Option<String>
-
 }
 
-fn main() -> crossterm::Result<()> 
-{
-    let args = Args::parse();
+/// Handle transforming the speed-related arguments into a concrete RaindropSpeed
+///
+/// As part of this work, validate that if min_speed and max_speed are used, the resulting range isn't empty.
+/// The entire program bails out if the resulting range is empty (similar to how [Parser::parse] does), because from the user's perspective,
+/// we want an empty range to look similar to missing min_speed or max_speed, or otherwise passing an invalid combination of arguments
+fn to_raindrop_speed(
+    single_speed: Option<f64>,
+    min_speed: Option<f64>,
+    max_speed: Option<f64>
+) -> RaindropSpeed {
+    const DEFAULT_RANGE: RangeInclusive<f64> = 0.25..=1.0;
 
-    let advance_chance = if args.sync_scrolling {1.0} else {0.75};
-    let target_framerate = args.framerate;
-
-    let charset = if args.custom_charset == None {
-        match args.charset {
-            CharsetType::Alphanumeric => charsets::Alphanumeric().get_charset(),
-            CharsetType::PrintableAscii => charsets::PrintableAscii().get_charset(),
-            CharsetType::AsciiAndSymbols => charsets::AsciiAndSymbols().get_charset(),
+    match (single_speed, min_speed, max_speed) {
+        (_, Some(min_speed), Some(max_speed)) => {
+            let range = min_speed..=max_speed;
+            if let Ok(range) = range.try_into() {
+                RaindropSpeed::Random(range)
+            } else {
+                MainArgs::command()
+                    .error(
+                        ErrorKind::ValueValidation,
+                        "value for --max-speed was less than value for --min-speed"
+                    )
+                    .exit()
+            }
         }
-    } else {
-        args.custom_charset.unwrap().chars().collect()
-    };
-
-    //we need a seperate call to anim_loop for each possible type of ColorAlgorithm
-    //to avoid this, we would need to use a trait object (like Box<dyn ColorAlgorithm>),
-    //but that would incur a runtime penalty that we could like to avoid
-    
-    match args.color_mode {
-        ColorMode::Green => {
-            let color_algorithm = color_algorithms::LightnessDescending{
-                hue: 118.0,
-                saturation: 1.0
-            };
-            anim_loop(charset, color_algorithm, advance_chance, target_framerate)
-        },
-        
-        ColorMode::Blue => {
-            let color_algorithm = color_algorithms::LightnessDescending{
-                hue: 244.0,
-                saturation: 1.0
-            };
-            anim_loop(charset, color_algorithm, advance_chance, target_framerate)
-        },
-
-        ColorMode::Purple => {
-            let color_algorithm = color_algorithms::LightnessDescending{
-                hue: 302.0,
-                saturation: 1.0
-            };
-            anim_loop(charset, color_algorithm, advance_chance, target_framerate)
-        },
-
-        ColorMode::Red => {
-            let color_algorithm = color_algorithms::LightnessDescending{
-                hue: 0.0,
-                saturation: 1.0
-            };
-            anim_loop(charset, color_algorithm, advance_chance, target_framerate)
-        },
-
-        ColorMode::Yellow => {
-            let color_algorithm = color_algorithms::LightnessDescending{
-                hue: 51.0,
-                saturation: 1.0
-            };
-            anim_loop(charset, color_algorithm, advance_chance, target_framerate)
-        }
-
-        ColorMode::Rainbow => {
-            let color_algorithm = color_algorithms::HueVariation{
-                saturation: 1.0, lightness: 0.5
-            };
-            anim_loop(charset, color_algorithm, advance_chance, target_framerate)
+        (Some(speed), _, _) => RaindropSpeed::Constant(speed),
+        (None, None, None) => RaindropSpeed::Random(DEFAULT_RANGE.try_into().unwrap()),
+        _ => {
+            //in theory we should never see any other combination of Some and None because clap would've already bailed out
+            panic!("invalid combination of arguments")
         }
     }
-        
+}
+
+/// Handle transforming the charset-related arguments into a concrete Vec<char>
+fn to_charset(custom_charset: Option<String>, charset_type: CharsetType) -> Vec<char> {
+    match (custom_charset, charset_type) {
+        (Some(charset), _) => charset.get_charset(),
+        (_, CharsetType::Alphanumeric) => charsets::Alphanumeric().get_charset(),
+        (_, CharsetType::PrintableAscii) => charsets::PrintableAscii().get_charset(),
+        (_, CharsetType::AsciiAndSymbols) => charsets::AsciiAndSymbols().get_charset(),
+        (_, CharsetType::Katakana) => charsets::Katakana().get_charset()
+    }
+}
+
+/// Handle transforming the color mode argument into a concrete ColorAlgorithm
+fn to_color_algorithm(color_mode: ColorMode) -> ColorAlgorithm {
+    match color_mode {
+        ColorMode::Green => LightnessDescending::try_new(118.0, 1.0).unwrap().into(),
+
+        ColorMode::Blue => LightnessDescending::try_new(244.0, 1.0).unwrap().into(),
+
+        ColorMode::Purple => LightnessDescending::try_new(302.0, 1.0).unwrap().into(),
+
+        ColorMode::Red => LightnessDescending::try_new(0.0, 1.0).unwrap().into(),
+
+        ColorMode::Yellow => LightnessDescending::try_new(51.0, 1.0).unwrap().into(),
+
+        ColorMode::Rainbow => HueVariation::try_new(1.0, 0.5).unwrap().into()
+    }
+}
+
+fn main() -> std::io::Result<()> {
+    let args = MainArgs::parse();
+
+    let allowed_speeds = to_raindrop_speed(args.speed, args.min_speed, args.max_speed);
+
+    let target_framerate = args.framerate;
+
+    let charset = to_charset(args.custom_charset, args.charset);
+
+    let color_algorithm = to_color_algorithm(args.color_mode);
+
+    let mut rng = rand::rng();
+
+    anim_loop(
+        &mut rng,
+        &charset,
+        color_algorithm,
+        allowed_speeds,
+        target_framerate
+    )
+}
+
+/// float parser/validator
+fn float_is_positive_finite(s: &str) -> Result<f64, &'static str> {
+    let float: f64 = s.parse().map_err(|_| "invalid float literal")?;
+    if !float.is_finite() {
+        Err("value must be finite (i.e. must not be NaN or infinite)")
+    } else if float <= 0.0 {
+        Err("value must be greater than 0")
+    } else {
+        Ok(float)
+    }
 }
 
 /// framerate parser/validator function
-fn framerate_in_range(s: &str) -> Result<usize, String>
-{
-    let framerate: usize = s.parse().map_err(|_| format!("\"{}\" isn't a valid integer", s))?;
+fn framerate_in_range(s: &str) -> Result<usize, &'static str> {
+    let framerate: usize = s.parse().map_err(|_| "invalid integer literal")?;
 
     if framerate == 0 {
-        Err(format!("framerate cannot be zero"))
+        Err("framerate cannot be zero")
     } else {
         Ok(framerate)
     }
